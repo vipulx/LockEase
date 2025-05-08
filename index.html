@@ -1,1 +1,305 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Smart Lock App</title>
+  <style>
+    * {
+      margin: 0;
+      padding: 0;
+      box-sizing: border-box;
+      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, Cantarell, sans-serif;
+    }
+    
+    body {
+      background-color: #4169E1;
+      color: white;
+      display: flex;
+      flex-direction: column;
+      height: 100vh;
+    }
+    
+    .app-container {
+      display: flex;
+      flex-direction: column;
+      height: 100%;
+      max-width: 400px;
+      margin: 0 auto;
+      padding: 20px;
+      width: 100%;
+    }
+    
+    .header {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      padding: 20px 0;
+    }
+    
+    .back-button {
+      color: white;
+      font-size: 24px;
+    }
+    
+    .settings-button {
+      font-size: 24px;
+    }
+    
+    .title {
+      margin-top: 20px;
+    }
+    
+    .title h3 {
+      font-size: 16px;
+      font-weight: normal;
+      letter-spacing: 1px;
+    }
+    
+    .title h1 {
+      font-size: 36px;
+    }
+    
+    .lock-container {
+      flex: 1;
+      display: flex;
+      flex-direction: column;
+      justify-content: center;
+      align-items: center;
+      position: relative;
+      margin: 20px 0;
+    }
+    
+    .lock-circle {
+      width: 240px;
+      height: 240px;
+      background-color: white;
+      border-radius: 50%;
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      position: relative;
+      box-shadow: 0 4px 10px rgba(0, 0, 0, 0.1);
+    }
+    
+    .lock-icon {
+      width: 120px;
+      height: 120px;
+      background-color: #4169E1;
+      border-radius: 50%;
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      color: white;
+      position: relative;
+      cursor: pointer;
+      transition: all 0.3s ease;
+    }
+    
+    .lock-icon:hover {
+      background-color: #3A5FCA;
+    }
+    
+    .lock-icon:active {
+      transform: scale(0.95);
+    }
+    
+    .lock-icon svg {
+      width: 60px;
+      height: 60px;
+      position: absolute;
+      left: 50%;
+      top: 50%;
+      transform: translate(-50%, -50%);
+    }
+    
+    .lock-gauge {
+      position: absolute;
+      width: 100%;
+      height: 100%;
+      border-radius: 50%;
+      transform: rotate(-90deg);
+      pointer-events: none;
+      transition: transform 0.5s ease;
+    }
+    
+    .lock-gauge.unlocked {
+      transform: rotate(0deg);
+    }
+    
+    .tick {
+      position: absolute;
+      width: 3px;
+      height: 12px;
+      background-color: #39D2C0;
+      left: 50%;
+      transform-origin: center 120px;
+    }
+    
+    .marker {
+      position: absolute;
+      width: 0;
+      height: 0;
+      border-left: 6px solid transparent;
+      border-right: 6px solid transparent;
+      border-bottom: 10px solid #F44336;
+      top: 5px;
+      left: 50%;
+      transform: translateX(-50%);
+      transition: transform 0.5s ease;
+    }
+    
+    /* Toggle button removed */
+    
+    .footer {
+      display: flex;
+      justify-content: space-between;
+      padding: 20px 40px;
+      margin-top: auto;
+    }
+    
+    .footer-item {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      color: white;
+      width: 33.33%;
+    }
+    
+    .footer-icon {
+      font-size: 24px;
+      margin-bottom: 5px;
+      height: 30px; /* Fixed height for icons */
+      display: flex;
+      align-items: center;
+      justify-content: center;
+    }
+    
+    .footer-text {
+      font-size: 14px;
+      height: 20px; /* Fixed height for text */
+      display: flex;
+      align-items: center;
+      justify-content: center;
+    }
+  </style>
+</head>
+<body>
+  <div class="app-container">
+    <div class="header">
+      <div class="back-button">&#8249;</div>
+      <div class="settings-button">&#9881;&#9881;&#9881;</div>
+    </div>
+    
+    <div class="title">
+      <h3>NEW MODERN</h3>
+      <h1>DT Santa Monica</h1>
+    </div>
+    
+    <div class="lock-container">
+      <div class="lock-circle">
+        <div id="lock-icon" class="lock-icon">
+          <svg id="lock-svg" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+            <rect x="3" y="11" width="18" height="11" rx="2" ry="2"></rect>
+            <path d="M7 11V7a5 5 0 0 1 10 0v4"></path>
+          </svg>
+          <!-- Toggle button removed -->
+        </div>
+        <div class="lock-gauge" id="gauge">
+          <!-- Ticks will be added with JavaScript -->
+        </div>
+        <div class="marker"></div>
+      </div>
+    </div>
+    
+    <div class="footer">
+      <div class="footer-item">
+        <div class="footer-icon">&#8635;</div>
+        <div class="footer-text">Online</div>
+      </div>
+      <div class="footer-item">
+        <div class="footer-icon">&#9889;</div>
+        <div class="footer-text" id="battery-level">51%</div>
+      </div>
+      <div class="footer-item">
+        <div class="footer-icon" id="lock-status-icon">&#128274;</div>
+        <div class="footer-text" id="lock-status">Closed</div>
+      </div>
+    </div>
+  </div>
 
+  <script>
+    // Create gauge ticks
+    const gauge = document.getElementById('gauge');
+    const numTicks = 30;
+    
+    for (let i = 0; i < numTicks; i++) {
+      const tick = document.createElement('div');
+      tick.className = 'tick';
+      const angle = (i / numTicks) * 360;
+      tick.style.transform = `rotate(${angle}deg)`;
+      gauge.appendChild(tick);
+    }
+    
+    // Lock functionality
+    let isLocked = true;
+    const lockIcon = document.getElementById('lock-icon');
+    // Toggle button removed
+    const lockSvg = document.getElementById('lock-svg');
+    const lockStatus = document.getElementById('lock-status');
+    const lockStatusIcon = document.getElementById('lock-status-icon');
+    
+    function updateLockState() {
+      if (isLocked) {
+        lockSvg.innerHTML = `
+          <rect x="3" y="11" width="18" height="11" rx="2" ry="2"></rect>
+          <path d="M7 11V7a5 5 0 0 1 10 0v4"></path>
+        `;
+        lockStatus.textContent = 'Closed';
+        lockStatusIcon.innerHTML = '&#128274;';
+        gauge.classList.remove('unlocked');
+      } else {
+        lockSvg.innerHTML = `
+          <rect x="3" y="11" width="18" height="11" rx="2" ry="2"></rect>
+          <path d="M7 11V7a5 5 0 0 1 10 0v4"></path>
+          <path d="M12 14v3"></path>
+        `;
+        lockStatus.textContent = 'Open';
+        lockStatusIcon.innerHTML = '&#128275;';
+        gauge.classList.add('unlocked');
+      }
+      
+      // Force layout recalculation to prevent footer shifting
+      document.body.offsetHeight;
+    }
+    
+    lockIcon.addEventListener('click', () => {
+      isLocked = !isLocked;
+      updateLockState();
+      
+      // Add animation effect when clicking
+      lockIcon.classList.add('pulse');
+      setTimeout(() => {
+        lockIcon.classList.remove('pulse');
+      }, 300);
+    });
+    
+    // Add visual feedback styles
+    const style = document.createElement('style');
+    style.textContent = `
+      @keyframes pulse {
+        0% { transform: scale(1); }
+        50% { transform: scale(0.95); }
+        100% { transform: scale(1); }
+      }
+      .pulse {
+        animation: pulse 0.3s ease-in-out;
+      }
+    `;
+    document.head.appendChild(style);
+    
+    // Initial update
+    updateLockState();
+  </script>
+</body>
+</html>
