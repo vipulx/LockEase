@@ -342,7 +342,7 @@
       <div class="login-logo">
         <i class="fa fa-lock"></i>
       </div>
-      <h1 class="login-title">LockEase</h1>
+      <h1 class="login-title">Smart Lock Access</h1>
       <p class="login-error" id="login-error">Invalid username or password</p>
       <div class="input-group">
         <i class="fa fa-user"></i>
@@ -404,9 +404,9 @@
     </div>
     
     <!-- Logout button -->
-<!--     <button class="logout-button" id="logout-button">
+    <button class="logout-button" id="logout-button">
       <i class="fa fa-sign-out"></i> Logout
-    </button> -->
+    </button>
   </div>
 
   <script>
@@ -487,6 +487,7 @@
     
     // Request fullscreen on page load if logged in
     document.addEventListener('DOMContentLoaded', function() {
+      checkLoginStatus();
       
       // Also try on first user interaction
       document.addEventListener('click', function firstClick() {
