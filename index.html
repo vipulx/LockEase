@@ -2,7 +2,9 @@
 <html lang="en">
 <head>
   <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
+  <meta name="mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-capable" content="yes">
   <title>Smart Lock App</title>
   <!-- Added Font Awesome CSS -->
   <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/4.7.0/css/font-awesome.min.css">
@@ -20,16 +22,23 @@
       display: flex;
       flex-direction: column;
       height: 100vh;
+      width: 100vw;
+      overflow: hidden;
+      position: fixed;
+      top: 0;
+      left: 0;
+      touch-action: manipulation;
     }
     
     .app-container {
       display: flex;
       flex-direction: column;
       height: 100%;
-      max-width: 400px;
+      max-width: 100%;
       margin: 0 auto;
       padding: 20px;
       width: 100%;
+      overflow: hidden;
     }
     
     .header {
@@ -189,8 +198,8 @@
     <div class="header">
       <!-- Changed back button to Font Awesome icon -->
       <div class="back-button"><i class="fa fa-chevron-left"></i></div>
-      <!-- Changed settings icon to specific code -->
-      <div class="settings-button">&#xf085;</div>
+      <!-- Changed settings icon to Font Awesome cogs icon -->
+      <div class="settings-button"><i class="fa fa-cogs"></i></div>
     </div>
     
     <div class="title">
@@ -216,8 +225,8 @@
     
     <div class="footer">
       <div class="footer-item">
-        <!-- Changed to Font Awesome wifi icon -->
-        <div class="footer-icon"><i class="fa fa-wifi"></i></div>
+        <!-- Changed to Font Awesome rss icon -->
+        <div class="footer-icon"><i class="fa fa-rss"></i></div>
         <div class="footer-text">Online</div>
       </div>
       <div class="footer-item">
@@ -234,6 +243,33 @@
   </div>
 
   <script>
+    // Function to request fullscreen
+    function requestFullscreen() {
+      const docEl = document.documentElement;
+      
+      if (docEl.requestFullscreen) {
+        docEl.requestFullscreen();
+      } else if (docEl.webkitRequestFullscreen) { /* Safari */
+        docEl.webkitRequestFullscreen();
+      } else if (docEl.msRequestFullscreen) { /* IE11 */
+        docEl.msRequestFullscreen();
+      } else if (docEl.mozRequestFullScreen) { /* Firefox */
+        docEl.mozRequestFullScreen();
+      }
+    }
+    
+    // Request fullscreen on page load
+    document.addEventListener('DOMContentLoaded', function() {
+      // Try to request fullscreen
+      requestFullscreen();
+      
+      // Also try on first user interaction
+      document.addEventListener('click', function firstClick() {
+        requestFullscreen();
+        document.removeEventListener('click', firstClick);
+      }, { once: true });
+    });
+    
     // Create gauge ticks
     const gauge = document.getElementById('gauge');
     const numTicks = 30;
@@ -319,6 +355,17 @@
         greetingElement.textContent = 'Good Night';
       }
     }
+    
+    // Add fullscreen button to the header for devices that don't auto-fullscreen
+    const header = document.querySelector('.header');
+    const fullscreenButton = document.createElement('div');
+    fullscreenButton.className = 'fullscreen-button';
+    fullscreenButton.innerHTML = '<i class="fa fa-expand"></i>';
+    fullscreenButton.style.marginLeft = 'auto';
+    fullscreenButton.style.marginRight = '20px';
+    fullscreenButton.style.cursor = 'pointer';
+    fullscreenButton.addEventListener('click', requestFullscreen);
+    header.insertBefore(fullscreenButton, document.querySelector('.settings-button'));
     
     // Update greeting on load and every minute
     updateGreeting();
