@@ -4,6 +4,8 @@
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>Smart Lock App</title>
+  <!-- Added Font Awesome CSS -->
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/4.7.0/css/font-awesome.min.css">
   <style>
     * {
       margin: 0;
@@ -149,8 +151,6 @@
       transition: transform 0.5s ease;
     }
     
-    /* Toggle button removed */
-    
     .footer {
       display: flex;
       justify-content: space-between;
@@ -187,8 +187,10 @@
 <body>
   <div class="app-container">
     <div class="header">
-      <div class="back-button">&#8249;</div>
-      <div class="settings-button">&#9881;&#9881;&#9881;</div>
+      <!-- Changed back button to Font Awesome icon -->
+      <div class="back-button"><i class="fa fa-chevron-left"></i></div>
+      <!-- Changed settings icon to Font Awesome icon -->
+      <div class="settings-button"><i class="fa fa-cog"></i></div>
     </div>
     
     <div class="title">
@@ -203,7 +205,7 @@
             <rect x="3" y="11" width="18" height="11" rx="2" ry="2"></rect>
             <path d="M7 11V7a5 5 0 0 1 10 0v4"></path>
           </svg>
-          <!-- Toggle button removed -->
+          <!-- Middle lock icon kept unchanged -->
         </div>
         <div class="lock-gauge" id="gauge">
           <!-- Ticks will be added with JavaScript -->
@@ -214,15 +216,18 @@
     
     <div class="footer">
       <div class="footer-item">
-        <div class="footer-icon">&#8635;</div>
+        <!-- Changed to Font Awesome refresh icon -->
+        <div class="footer-icon"><i class="fa fa-refresh"></i></div>
         <div class="footer-text">Online</div>
       </div>
       <div class="footer-item">
-        <div class="footer-icon">&#9889;</div>
+        <!-- Changed to Font Awesome battery icon -->
+        <div class="footer-icon"><i class="fa fa-battery-half"></i></div>
         <div class="footer-text" id="battery-level">51%</div>
       </div>
       <div class="footer-item">
-        <div class="footer-icon" id="lock-status-icon">&#128274;</div>
+        <!-- Changed to Font Awesome lock icons (will be updated by script) -->
+        <div class="footer-icon" id="lock-status-icon"><i class="fa fa-lock"></i></div>
         <div class="footer-text" id="lock-status">Closed</div>
       </div>
     </div>
@@ -244,7 +249,6 @@
     // Lock functionality
     let isLocked = true;
     const lockIcon = document.getElementById('lock-icon');
-    // Toggle button removed
     const lockSvg = document.getElementById('lock-svg');
     const lockStatus = document.getElementById('lock-status');
     const lockStatusIcon = document.getElementById('lock-status-icon');
@@ -256,7 +260,8 @@
           <path d="M7 11V7a5 5 0 0 1 10 0v4"></path>
         `;
         lockStatus.textContent = 'Closed';
-        lockStatusIcon.innerHTML = '&#128274;';
+        // Changed to Font Awesome lock icon
+        lockStatusIcon.innerHTML = '<i class="fa fa-lock"></i>';
         gauge.classList.remove('unlocked');
       } else {
         lockSvg.innerHTML = `
@@ -265,7 +270,8 @@
           <path d="M12 14v3"></path>
         `;
         lockStatus.textContent = 'Open';
-        lockStatusIcon.innerHTML = '&#128275;';
+        // Changed to Font Awesome unlock icon
+        lockStatusIcon.innerHTML = '<i class="fa fa-unlock"></i>';
         gauge.classList.add('unlocked');
       }
       
