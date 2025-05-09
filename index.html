@@ -189,13 +189,13 @@
     <div class="header">
       <!-- Changed back button to Font Awesome icon -->
       <div class="back-button"><i class="fa fa-chevron-left"></i></div>
-      <!-- Changed settings icon to Font Awesome icon -->
-      <div class="settings-button"><i class="fa fa-cog"></i></div>
+      <!-- Changed settings icon to specific code -->
+      <div class="settings-button">&#xf085;</div>
     </div>
     
     <div class="title">
-      <h3>NEW MODERN</h3>
-      <h1>DT Santa Monica</h1>
+      <h3 id="greeting">Good Morning</h3>
+      <h1>Siddhart Singhania</h1>
     </div>
     
     <div class="lock-container">
@@ -216,8 +216,8 @@
     
     <div class="footer">
       <div class="footer-item">
-        <!-- Changed to Font Awesome refresh icon -->
-        <div class="footer-icon"><i class="fa fa-refresh"></i></div>
+        <!-- Changed to Font Awesome wifi icon -->
+        <div class="footer-icon"><i class="fa fa-wifi"></i></div>
         <div class="footer-text">Online</div>
       </div>
       <div class="footer-item">
@@ -303,6 +303,26 @@
       }
     `;
     document.head.appendChild(style);
+    
+    // Set greeting based on time of day
+    function updateGreeting() {
+      const hour = new Date().getHours();
+      const greetingElement = document.getElementById('greeting');
+      
+      if (hour >= 5 && hour < 12) {
+        greetingElement.textContent = 'Good Morning';
+      } else if (hour >= 12 && hour < 18) {
+        greetingElement.textContent = 'Good Afternoon';
+      } else if (hour >= 18 && hour < 22) {
+        greetingElement.textContent = 'Good Evening';
+      } else {
+        greetingElement.textContent = 'Good Night';
+      }
+    }
+    
+    // Update greeting on load and every minute
+    updateGreeting();
+    setInterval(updateGreeting, 60000);
     
     // Initial update
     updateLockState();
