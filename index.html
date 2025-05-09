@@ -30,6 +30,111 @@
       touch-action: manipulation;
     }
     
+    /* Login Page Styles */
+    .login-container {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      height: 100vh;
+      width: 100%;
+      padding: 20px;
+      background-color: #4169E1;
+      z-index: 100;
+      position: absolute;
+      top: 0;
+      left: 0;
+      transition: transform 0.5s ease-in-out;
+    }
+    
+    .login-box {
+      background-color: white;
+      border-radius: 10px;
+      padding: 30px;
+      width: 90%;
+      max-width: 400px;
+      box-shadow: 0 10px 25px rgba(0, 0, 0, 0.2);
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+    }
+    
+    .login-logo {
+      width: 100px;
+      height: 100px;
+      background-color: #4169E1;
+      border-radius: 50%;
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      color: white;
+      font-size: 40px;
+      margin-bottom: 20px;
+    }
+    
+    .login-title {
+      color: #333;
+      font-size: 24px;
+      margin-bottom: 20px;
+      text-align: center;
+    }
+    
+    .input-group {
+      position: relative;
+      width: 100%;
+      margin-bottom: 20px;
+    }
+    
+    .input-group i {
+      position: absolute;
+      left: 15px;
+      top: 15px;
+      color: #999;
+    }
+    
+    .login-input {
+      width: 100%;
+      padding: 15px 15px 15px 45px;
+      border: 1px solid #ddd;
+      border-radius: 5px;
+      font-size: 16px;
+      color: #333;
+      transition: border-color 0.3s;
+    }
+    
+    .login-input:focus {
+      border-color: #4169E1;
+      outline: none;
+    }
+    
+    .login-button {
+      width: 100%;
+      padding: 15px;
+      background-color: #4169E1;
+      color: white;
+      border: none;
+      border-radius: 5px;
+      font-size: 16px;
+      cursor: pointer;
+      transition: background-color 0.3s;
+    }
+    
+    .login-button:hover {
+      background-color: #3A5FCA;
+    }
+    
+    .login-error {
+      color: #f44336;
+      margin-bottom: 15px;
+      text-align: center;
+      display: none;
+    }
+    
+    .hidden {
+      transform: translateY(-100%);
+    }
+    
+    /* App Styles */
     .app-container {
       display: flex;
       flex-direction: column;
@@ -191,14 +296,72 @@
       align-items: center;
       justify-content: center;
     }
+    
+    @keyframes pulse {
+      0% { transform: scale(1); }
+      50% { transform: scale(0.95); }
+      100% { transform: scale(1); }
+    }
+    
+    .pulse {
+      animation: pulse 0.3s ease-in-out;
+    }
+    
+    /* Added for login animation */
+    @keyframes shake {
+      0%, 100% { transform: translateX(0); }
+      10%, 30%, 50%, 70%, 90% { transform: translateX(-5px); }
+      20%, 40%, 60%, 80% { transform: translateX(5px); }
+    }
+    
+    .shake {
+      animation: shake 0.5s;
+    }
+
+    /* Logout button */
+    .logout-button {
+      position: absolute;
+      bottom: 20px;
+      right: 20px;
+      background-color: rgba(255, 255, 255, 0.2);
+      color: white;
+      border: none;
+      border-radius: 5px;
+      padding: 8px 15px;
+      cursor: pointer;
+      display: flex;
+      align-items: center;
+      gap: 5px;
+    }
   </style>
 </head>
 <body>
+  <!-- Login Container -->
+  <div class="login-container" id="login-container">
+    <div class="login-box">
+      <div class="login-logo">
+        <i class="fa fa-lock"></i>
+      </div>
+      <h1 class="login-title">Smart Lock Access</h1>
+      <p class="login-error" id="login-error">Invalid username or password</p>
+      <div class="input-group">
+        <i class="fa fa-user"></i>
+        <input type="text" class="login-input" id="username" placeholder="Username" autocomplete="username">
+      </div>
+      <div class="input-group">
+        <i class="fa fa-key"></i>
+        <input type="password" class="login-input" id="password" placeholder="Password" autocomplete="current-password">
+      </div>
+      <button class="login-button" id="login-button">Login</button>
+    </div>
+  </div>
+
+  <!-- Main App Container -->
   <div class="app-container">
     <div class="header">
-      <!-- Changed back button to Font Awesome icon -->
+      <!-- Back button -->
       <div class="back-button"><i class="fa fa-chevron-left"></i></div>
-      <!-- Changed settings icon to Font Awesome cogs icon -->
+      <!-- Settings icon -->
       <div class="settings-button"><i class="fa fa-cogs"></i></div>
     </div>
     
@@ -214,7 +377,6 @@
             <rect x="3" y="11" width="18" height="11" rx="2" ry="2"></rect>
             <path d="M7 11V7a5 5 0 0 1 10 0v4"></path>
           </svg>
-          <!-- Middle lock icon kept unchanged -->
         </div>
         <div class="lock-gauge" id="gauge">
           <!-- Ticks will be added with JavaScript -->
@@ -225,24 +387,89 @@
     
     <div class="footer">
       <div class="footer-item">
-        <!-- Changed to Font Awesome rss icon -->
+        <!-- RSS icon -->
         <div class="footer-icon"><i class="fa fa-rss"></i></div>
         <div class="footer-text">Online</div>
       </div>
       <div class="footer-item">
-        <!-- Changed to Font Awesome battery icon -->
+        <!-- Battery icon -->
         <div class="footer-icon"><i class="fa fa-battery-half"></i></div>
         <div class="footer-text" id="battery-level">51%</div>
       </div>
       <div class="footer-item">
-        <!-- Changed to Font Awesome lock icons (will be updated by script) -->
+        <!-- Lock status icon -->
         <div class="footer-icon" id="lock-status-icon"><i class="fa fa-lock"></i></div>
         <div class="footer-text" id="lock-status">Closed</div>
       </div>
     </div>
+    
+    <!-- Logout button -->
+    <button class="logout-button" id="logout-button">
+      <i class="fa fa-sign-out"></i> Logout
+    </button>
   </div>
 
   <script>
+    // Login functionality
+    const loginContainer = document.getElementById('login-container');
+    const loginButton = document.getElementById('login-button');
+    const usernameInput = document.getElementById('username');
+    const passwordInput = document.getElementById('password');
+    const loginError = document.getElementById('login-error');
+    const logoutButton = document.getElementById('logout-button');
+    
+    // Default credentials (in a real app, this should be handled securely on a server)
+    const validUsername = 'admin';
+    const validPassword = 'password';
+    
+    // Check if user was previously logged in
+    function checkLoginStatus() {
+      const isLoggedIn = localStorage.getItem('smartLockLoggedIn') === 'true';
+      if (isLoggedIn) {
+        loginContainer.classList.add('hidden');
+        requestFullscreen(); // Try to go fullscreen after login
+      }
+    }
+    
+    // Attempt login on button click
+    loginButton.addEventListener('click', function() {
+      attemptLogin();
+    });
+    
+    // Also attempt login on Enter key press
+    passwordInput.addEventListener('keypress', function(e) {
+      if (e.key === 'Enter') {
+        attemptLogin();
+      }
+    });
+    
+    function attemptLogin() {
+      const username = usernameInput.value.trim();
+      const password = passwordInput.value;
+      
+      if (username === validUsername && password === validPassword) {
+        localStorage.setItem('smartLockLoggedIn', 'true');
+        loginContainer.classList.add('hidden');
+        requestFullscreen(); // Try to go fullscreen after login
+      } else {
+        loginError.style.display = 'block';
+        document.querySelector('.login-box').classList.add('shake');
+        setTimeout(() => {
+          document.querySelector('.login-box').classList.remove('shake');
+        }, 500);
+      }
+    }
+    
+    // Logout functionality
+    logoutButton.addEventListener('click', function() {
+      localStorage.removeItem('smartLockLoggedIn');
+      loginContainer.classList.remove('hidden');
+      // Clear input fields
+      usernameInput.value = '';
+      passwordInput.value = '';
+      loginError.style.display = 'none';
+    });
+    
     // Function to request fullscreen
     function requestFullscreen() {
       const docEl = document.documentElement;
@@ -258,14 +485,15 @@
       }
     }
     
-    // Request fullscreen on page load
+    // Request fullscreen on page load if logged in
     document.addEventListener('DOMContentLoaded', function() {
-      // Try to request fullscreen
-      requestFullscreen();
+      checkLoginStatus();
       
       // Also try on first user interaction
       document.addEventListener('click', function firstClick() {
-        requestFullscreen();
+        if (localStorage.getItem('smartLockLoggedIn') === 'true') {
+          requestFullscreen();
+        }
         document.removeEventListener('click', firstClick);
       }, { once: true });
     });
@@ -296,7 +524,6 @@
           <path d="M7 11V7a5 5 0 0 1 10 0v4"></path>
         `;
         lockStatus.textContent = 'Closed';
-        // Changed to Font Awesome lock icon
         lockStatusIcon.innerHTML = '<i class="fa fa-lock"></i>';
         gauge.classList.remove('unlocked');
       } else {
@@ -306,7 +533,6 @@
           <path d="M12 14v3"></path>
         `;
         lockStatus.textContent = 'Open';
-        // Changed to Font Awesome unlock icon
         lockStatusIcon.innerHTML = '<i class="fa fa-unlock"></i>';
         gauge.classList.add('unlocked');
       }
@@ -326,20 +552,6 @@
       }, 300);
     });
     
-    // Add visual feedback styles
-    const style = document.createElement('style');
-    style.textContent = `
-      @keyframes pulse {
-        0% { transform: scale(1); }
-        50% { transform: scale(0.95); }
-        100% { transform: scale(1); }
-      }
-      .pulse {
-        animation: pulse 0.3s ease-in-out;
-      }
-    `;
-    document.head.appendChild(style);
-    
     // Set greeting based on time of day
     function updateGreeting() {
       const hour = new Date().getHours();
@@ -356,6 +568,10 @@
       }
     }
     
+    // Update greeting on load and every minute
+    updateGreeting();
+    setInterval(updateGreeting, 60000);
+    
     // Add fullscreen button to the header for devices that don't auto-fullscreen
     const header = document.querySelector('.header');
     const fullscreenButton = document.createElement('div');
@@ -366,10 +582,6 @@
     fullscreenButton.style.cursor = 'pointer';
     fullscreenButton.addEventListener('click', requestFullscreen);
     header.insertBefore(fullscreenButton, document.querySelector('.settings-button'));
-    
-    // Update greeting on load and every minute
-    updateGreeting();
-    setInterval(updateGreeting, 60000);
     
     // Initial update
     updateLockState();
