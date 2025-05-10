@@ -2,13 +2,27 @@
 <html lang="en">
 <head>
   <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
+  <meta name="viewport" content="width=width=device-width, initial-scale=1.0, user-scalable=no">
   <meta name="mobile-web-app-capable" content="yes">
-  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-capable"="yes">
   <title>LockEase App</title>
   <!-- Added Font Awesome CSS -->
   <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/4.7.0/css/font-awesome.min.css">
   <style>
+    :root {
+      --bg-color: hsl(0, 0%, 29%);
+      --text-color: white;
+      --login-bg: #525252;
+      --login-box-bg: rgb(148, 148, 148);
+    }
+
+    :root[data-theme="light"] {
+      --bg-color: #f0f0f0;
+      --text-color: #333;
+      --login-bg: #ffffff;
+      --login-box-bg: #ffffff;
+    }
+
     * {
       margin: 0;
       padding: 0;
@@ -17,8 +31,8 @@
     }
     
     body {
-      background-color: hsl(0, 0%, 29%);
-      color: white;
+      background-color: var(--bg-color);
+      color: var(--text-color);
       display: flex;
       flex-direction: column;
       height: 100vh;
@@ -39,7 +53,7 @@
       height: 100vh;
       width: 100%;
       padding: 20px;
-      background-color: #525252;
+      background-color: var(--login-bg);
       z-index: 100;
       position: absolute;
       top: 0;
@@ -48,7 +62,7 @@
     }
     
     .login-box {
-      background-color: rgb(148, 148, 148);
+      background-color: var(--login-box-bg);
       border-radius: 10px;
       padding: 30px;
       width: 90%;
@@ -201,12 +215,12 @@
     .lock-icon {
       width: 120px;
       height: 120px;
-      background-color: #424243;
+      background-color: var(--text-color);
+      color: var(--bg-color);
       border-radius: 50%;
       display: flex;
       justify-content: center;
       align-items: center;
-      color: white;
       position: relative;
       cursor: pointer;
       transition: all 0.3s ease;
@@ -276,7 +290,7 @@
       display: flex;
       flex-direction: column;
       align-items: center;
-      color: white;
+      color: var(--text-color);
       width: 33.33%;
     }
     
@@ -323,8 +337,8 @@
       position: absolute;
       bottom: 20px;
       right: 20px;
-      background-color: rgba(255, 255, 255, 0.2);
-      color: white;
+      background-color: var(--text-color, rgba(255, 255, 255, 0.2));
+      color: var(--bg-color);
       border: none;
       border-radius: 5px;
       padding: 8px 15px;
@@ -406,10 +420,23 @@
     <!-- Logout button -->
     <button class="logout-button" id="logout-button">
       <i class="fa fa-sign-out"></i>
+      <span>Logout</span>
     </button>
   </div>
 
   <script>
+    // Theme handling
+    function setTheme(theme) {
+        document.documentElement.setAttribute('data-theme', theme);
+        localStorage.setItem('theme', theme);
+    }
+
+    // Check for saved theme preference
+    function loadTheme() {
+        const savedTheme = localStorage.getItem('theme') || 'dark';
+        setTheme(savedTheme);
+    }
+
     // Login functionality
     const loginContainer = document.getElementById('login-container');
     const loginButton = document.getElementById('login-button');
@@ -487,6 +514,7 @@
     
     // Request fullscreen on page load if logged in
     document.addEventListener('DOMContentLoaded', function() {
+      loadTheme();
       checkLoginStatus();
       
       // Also try on first user interaction
@@ -582,12 +610,6 @@
     fullscreenButton.style.cursor = 'pointer';
     fullscreenButton.addEventListener('click', requestFullscreen);
     header.insertBefore(fullscreenButton, document.querySelector('.settings-button'));
-    
-    // Back button functionality
-    const backButton = document.querySelector('.back-button');
-    backButton.addEventListener('click', function() {
-        window.location.href = 'DetailView.html';
-    });
 
     // Initial update
     updateLockState();
