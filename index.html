@@ -497,8 +497,45 @@
       loginError.style.display = 'none';
     });
     
+    // Add fullscreen functionality
+    async function requestFullscreen() {
+        const docEl = document.documentElement;
+        
+        if (!document.fullscreenElement && !document.webkitFullscreenElement) {
+            try {
+                if (docEl.requestFullscreen) {
+                    await docEl.requestFullscreen();
+                } else if (docEl.webkitRequestFullscreen) { /* Safari */
+                    await docEl.webkitRequestFullscreen();
+                }
+                localStorage.setItem('isFullscreen', 'true');
+            } catch (err) {
+                console.log('Could not enter fullscreen:', err);
+            }
+        }
+    }
+
+    // Update your DOMContentLoaded event listener
+    document.addEventListener('DOMContentLoaded', async function() {
+        loadTheme();
+        checkLoginStatus();
+        
+        if (localStorage.getItem('smartLockLoggedIn') === 'true') {
+            if (localStorage.getItem('isFullscreen') === 'true') {
+                await requestFullscreen();
+            }
+        }
+    });
+
+    // Handle page visibility changes
+    document.addEventListener('visibilitychange', async function() {
+        if (!document.hidden && localStorage.getItem('isFullscreen') === 'true') {
+            await requestFullscreen();
+        }
+    });
+
     // Function to request fullscreen
-    function requestFullscreen() {
+    function requestFullscreenLegacy() {
       const docEl = document.documentElement;
       
       if (docEl.requestFullscreen) {
@@ -520,7 +557,7 @@
       // Also try on first user interaction
       document.addEventListener('click', function firstClick() {
         if (localStorage.getItem('smartLockLoggedIn') === 'true') {
-          requestFullscreen();
+          requestFullscreenLegacy();
         }
         document.removeEventListener('click', firstClick);
       }, { once: true });
@@ -608,7 +645,7 @@
     fullscreenButton.style.marginLeft = 'auto';
     fullscreenButton.style.marginRight = '20px';
     fullscreenButton.style.cursor = 'pointer';
-    fullscreenButton.addEventListener('click', requestFullscreen);
+    fullscreenButton.addEventListener('click', requestFullscreenLegacy);
     header.insertBefore(fullscreenButton, document.querySelector('.settings-button'));
 
     // Initial update
