@@ -2,9 +2,10 @@
 <html lang="en">
 <head>
   <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
   <meta name="mobile-web-app-capable" content="yes">
-  <meta name="apple-mobile-web-app-capable"="yes">
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
   <title>LockEase - Details</title>
   <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/4.7.0/css/font-awesome.min.css">
   <style>
@@ -233,45 +234,49 @@
     }
 
     // Add fullscreen functionality
-    function requestFullscreen() {
+    async function requestFullscreen() {
         const docEl = document.documentElement;
         
-        if (docEl.requestFullscreen) {
-            docEl.requestFullscreen();
-        } else if (docEl.webkitRequestFullscreen) { /* Safari */
-            docEl.webkitRequestFullscreen();
-        } else if (docEl.msRequestFullscreen) { /* IE11 */
-            docEl.msRequestFullscreen();
-        } else if (docEl.mozRequestFullScreen) { /* Firefox */
-            docEl.mozRequestFullScreen();
+        try {
+            if (docEl.requestFullscreen) {
+                await docEl.requestFullscreen();
+            } else if (docEl.webkitRequestFullscreen) { /* Safari */
+                await docEl.webkitRequestFullscreen();
+            } else if (docEl.msRequestFullscreen) { /* IE11 */
+                await docEl.msRequestFullscreen();
+            } else if (docEl.mozRequestFullScreen) { /* Firefox */
+                await docEl.mozRequestFullScreen();
+            }
+            localStorage.setItem('isFullscreen', 'true');
+        } catch (err) {
+            console.log('Could not enter fullscreen:', err);
         }
     }
 
-    // Initialize theme when page loads
+    // Initialize theme and fullscreen when page loads
     document.addEventListener('DOMContentLoaded', async function() {
         loadTheme();
         
         // Check if user is logged in
         if (localStorage.getItem('smartLockLoggedIn') === 'true') {
-            try {
-                // Request fullscreen on page load
-                await document.documentElement.requestFullscreen();
-            } catch (err) {
-                console.log('Could not enter fullscreen:', err);
-            }
+            // Try to request fullscreen on page load
+            await requestFullscreen();
+            
+            // Also try on first user interaction
+            document.addEventListener('click', async function firstClick() {
+                await requestFullscreen();
+                document.removeEventListener('click', firstClick);
+            }, { once: true });
         } else {
-            window.location.href = 'index.html'; // Redirect to login if not logged in
+            window.location.href = 'index.html';
         }
+    });
 
-        // Also try on first user interaction
-        document.addEventListener('click', async function firstClick() {
-            try {
-                await document.documentElement.requestFullscreen();
-            } catch (err) {
-                console.log('Could not enter fullscreen:', err);
-            }
-            document.removeEventListener('click', firstClick);
-        }, { once: true });
+    // Handle page visibility changes
+    document.addEventListener('visibilitychange', async function() {
+        if (!document.hidden && localStorage.getItem('isFullscreen') === 'true') {
+            await requestFullscreen();
+        }
     });
 
     // Add event listener to your theme toggle button (if you have one)
@@ -310,9 +315,11 @@
       window.location.href = 'index.html';
     });
 
-    // Back button navigation
+    // Back button navigation with fullscreen preservation
     const backButton = document.getElementById('back-button');
-    backButton.addEventListener('click', () => {
+    backButton.addEventListener('click', async () => {
+        localStorage.setItem('isFullscreen', 'true');
+        await requestFullscreen();
         window.location.href = 'index.html';
     });
   </script>
