@@ -2,7 +2,7 @@
 <html lang="en">
 <head>
   <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=no">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
   <meta name="mobile-web-app-capable" content="yes">
   <meta name="apple-mobile-web-app-capable"="yes">
   <title>LockEase - Details</title>
@@ -233,42 +233,45 @@
     }
 
     // Add fullscreen functionality
-    async function requestFullscreen() {
+    function requestFullscreen() {
         const docEl = document.documentElement;
         
-        if (!document.fullscreenElement && !document.webkitFullscreenElement) {
-            try {
-                if (docEl.requestFullscreen) {
-                    await docEl.requestFullscreen();
-                } else if (docEl.webkitRequestFullscreen) { /* Safari */
-                    await docEl.webkitRequestFullscreen();
-                }
-                localStorage.setItem('isFullscreen', 'true');
-            } catch (err) {
-                console.log('Could not enter fullscreen:', err);
-            }
+        if (docEl.requestFullscreen) {
+            docEl.requestFullscreen();
+        } else if (docEl.webkitRequestFullscreen) { /* Safari */
+            docEl.webkitRequestFullscreen();
+        } else if (docEl.msRequestFullscreen) { /* IE11 */
+            docEl.msRequestFullscreen();
+        } else if (docEl.mozRequestFullScreen) { /* Firefox */
+            docEl.mozRequestFullScreen();
         }
     }
 
-    // Initialize theme and fullscreen when page loads
+    // Initialize theme when page loads
     document.addEventListener('DOMContentLoaded', async function() {
         loadTheme();
         
         // Check if user is logged in
         if (localStorage.getItem('smartLockLoggedIn') === 'true') {
-            if (localStorage.getItem('isFullscreen') === 'true') {
-                await requestFullscreen();
+            try {
+                // Request fullscreen on page load
+                await document.documentElement.requestFullscreen();
+            } catch (err) {
+                console.log('Could not enter fullscreen:', err);
             }
         } else {
-            window.location.href = 'index.html';
+            window.location.href = 'index.html'; // Redirect to login if not logged in
         }
-    });
 
-    // Handle page visibility changes
-    document.addEventListener('visibilitychange', async function() {
-        if (!document.hidden && localStorage.getItem('isFullscreen') === 'true') {
-            await requestFullscreen();
-        }
+        // Also try on first user interaction
+        document.addEventListener('click', async function firstClick() {
+            try {
+                await document.documentElement.requestFullscreen();
+            } catch (err) {
+                console.log('Could not enter fullscreen:', err);
+            }
+            document.removeEventListener('click', firstClick);
+        }, { once: true });
     });
 
     // Add event listener to your theme toggle button (if you have one)
@@ -310,7 +313,6 @@
     // Back button navigation
     const backButton = document.getElementById('back-button');
     backButton.addEventListener('click', () => {
-        localStorage.setItem('isFullscreen', 'true'); // Preserve fullscreen state
         window.location.href = 'index.html';
     });
   </script>
