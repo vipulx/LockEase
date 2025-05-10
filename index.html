@@ -437,6 +437,14 @@
         setTheme(savedTheme);
     }
 
+    // User management
+    const users = [
+        { username: 'admin', password: '0152', name: 'Siddhart Singhania' },
+        { username: 'cd031', password: 'cd031', name: 'Gunnikaa' },
+        { username: 'cd112', password: 'cd112', name: 'Sushma' },
+        { username: 'cd062', password: 'cd062', name: 'Manishka' }
+    ];
+
     // Login functionality
     const loginContainer = document.getElementById('login-container');
     const loginButton = document.getElementById('login-button');
@@ -471,30 +479,35 @@
     });
     
     function attemptLogin() {
-      const username = usernameInput.value.trim();
-      const password = passwordInput.value;
-      
-      if (username === validUsername && password === validPassword) {
-        localStorage.setItem('smartLockLoggedIn', 'true');
-        loginContainer.classList.add('hidden');
-        requestFullscreen(); // Try to go fullscreen after login
-      } else {
-        loginError.style.display = 'block';
-        document.querySelector('.login-box').classList.add('shake');
-        setTimeout(() => {
-          document.querySelector('.login-box').classList.remove('shake');
-        }, 500);
-      }
+        const username = usernameInput.value.trim();
+        const password = passwordInput.value;
+        
+        const user = users.find(u => u.username === username && u.password === password);
+        
+        if (user) {
+            localStorage.setItem('smartLockLoggedIn', 'true');
+            localStorage.setItem('currentUser', user.name);
+            loginContainer.classList.add('hidden');
+            updateGreeting(); // Update greeting with user name
+            requestFullscreen();
+        } else {
+            loginError.style.display = 'block';
+            document.querySelector('.login-box').classList.add('shake');
+            setTimeout(() => {
+                document.querySelector('.login-box').classList.remove('shake');
+            }, 500);
+        }
     }
     
     // Logout functionality
     logoutButton.addEventListener('click', function() {
-      localStorage.removeItem('smartLockLoggedIn');
-      loginContainer.classList.remove('hidden');
-      // Clear input fields
-      usernameInput.value = '';
-      passwordInput.value = '';
-      loginError.style.display = 'none';
+        localStorage.removeItem('smartLockLoggedIn');
+        localStorage.removeItem('currentUser');
+        loginContainer.classList.remove('hidden');
+        // Clear input fields
+        usernameInput.value = '';
+        passwordInput.value = '';
+        loginError.style.display = 'none';
     });
     
     // Add fullscreen functionality
@@ -519,6 +532,7 @@
     document.addEventListener('DOMContentLoaded', async function() {
         loadTheme();
         checkLoginStatus();
+        updateGreeting();
         
         if (localStorage.getItem('smartLockLoggedIn') === 'true') {
             if (localStorage.getItem('isFullscreen') === 'true') {
@@ -619,18 +633,24 @@
     
     // Set greeting based on time of day
     function updateGreeting() {
-      const hour = new Date().getHours();
-      const greetingElement = document.getElementById('greeting');
-      
-      if (hour >= 5 && hour < 12) {
-        greetingElement.textContent = 'Good Morning';
-      } else if (hour >= 12 && hour < 18) {
-        greetingElement.textContent = 'Good Afternoon';
-      } else if (hour >= 18 && hour < 22) {
-        greetingElement.textContent = 'Good Evening';
-      } else {
-        greetingElement.textContent = 'Good Night';
-      }
+        const hour = new Date().getHours();
+        const greetingElement = document.getElementById('greeting');
+        const nameElement = document.querySelector('.title h1');
+        const userName = localStorage.getItem('currentUser') || 'Guest';
+        
+        let greeting = '';
+        if (hour >= 5 && hour < 12) {
+            greeting = 'Good Morning';
+        } else if (hour >= 12 && hour < 18) {
+            greeting = 'Good Afternoon';
+        } else if (hour >= 18 && hour < 22) {
+            greeting = 'Good Evening';
+        } else {
+            greeting = 'Good Night';
+        }
+        
+        greetingElement.textContent = greeting;
+        nameElement.textContent = userName;
     }
     
     // Update greeting on load and every minute
