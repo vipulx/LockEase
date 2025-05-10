@@ -201,7 +201,7 @@
     .lock-icon {
       width: 120px;
       height: 120px;
-      background-color: #424243);
+      background-color: #424243;
       border-radius: 50%;
       display: flex;
       justify-content: center;
@@ -360,7 +360,7 @@
   <div class="app-container">
     <div class="header">
       <!-- Back button -->
-      <div class="back-button"><i class="fa fa-chevron-left"></i></div>
+      <a href="DetailView.html" class="back-button"><i class="fa fa-chevron-left"></i></a>
       <!-- Settings icon -->
       <div class="settings-button"><i class="fa fa-cogs"></i></div>
     </div>
@@ -583,6 +583,12 @@
     fullscreenButton.addEventListener('click', requestFullscreen);
     header.insertBefore(fullscreenButton, document.querySelector('.settings-button'));
     
+    // Back button functionality
+    const backButton = document.querySelector('.back-button');
+    backButton.addEventListener('click', function() {
+        window.location.href = 'DetailView.html';
+    });
+
     // Initial update
     updateLockState();
   </script>
