@@ -331,22 +331,6 @@
     .shake {
       animation: shake 0.5s;
     }
-
-    /* Logout button */
-    .logout-button {
-      position: absolute;
-      bottom: 20px;
-      right: 20px;
-      background-color: var(--text-color, rgba(255, 255, 255, 0.2));
-      color: var(--bg-color);
-      border: none;
-      border-radius: 5px;
-      padding: 8px 15px;
-      cursor: pointer;
-      display: flex;
-      align-items: center;
-      gap: 5px;
-    }
   </style>
 </head>
 <body>
@@ -416,12 +400,6 @@
         <div class="footer-text" id="lock-status">Closed</div>
       </div>
     </div>
-    
-    <!-- Logout button -->
-    <button class="logout-button" id="logout-button">
-      <i class="fa fa-sign-out"></i>
-      <span>Logout</span>
-    </button>
   </div>
 
   <script>
@@ -451,7 +429,6 @@
     const usernameInput = document.getElementById('username');
     const passwordInput = document.getElementById('password');
     const loginError = document.getElementById('login-error');
-    const logoutButton = document.getElementById('logout-button');
     
     // Default credentials (in a real app, this should be handled securely on a server)
     const validUsername = 'admin';
@@ -498,17 +475,6 @@
             }, 500);
         }
     }
-    
-    // Logout functionality
-    logoutButton.addEventListener('click', function() {
-        localStorage.removeItem('smartLockLoggedIn');
-        localStorage.removeItem('currentUser');
-        loginContainer.classList.remove('hidden');
-        // Clear input fields
-        usernameInput.value = '';
-        passwordInput.value = '';
-        loginError.style.display = 'none';
-    });
     
     // Add fullscreen functionality
     async function requestFullscreen() {
