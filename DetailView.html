@@ -1,0 +1,320 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
+  <meta name="mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-capable"="yes">
+  <title>LockEase - Details</title>
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/4.7.0/css/font-awesome.min.css">
+  <style>
+    * {
+      margin: 0;
+      padding: 0;
+      box-sizing: border-box;
+      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, Cantarell, sans-serif;
+    }
+
+    :root {
+      --bg-color: hsl(0, 0%, 29%);
+      --text-color: white;
+      --login-bg: #525252;
+      --login-box-bg: rgb(148, 148, 148);
+      --card-bg: #424243;
+    }
+
+    :root[data-theme="light"] {
+      --bg-color: #f0f0f0;
+      --text-color: #333;
+      --login-bg: #ffffff;
+      --login-box-bg: #ffffff;
+      --card-bg: #ffffff;
+    }
+
+    body {
+      background-color: var(--bg-color);
+      color: var(--text-color);
+      transition: background-color 0.3s ease;
+    }
+
+    .header {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      padding: 16px;
+      background: none;
+    }
+
+    .camera-container {
+      margin: 0;
+      border-radius: 0;
+      overflow: hidden;
+    }
+
+    .camera-feed {
+      width: 100%;
+      height: 300px;
+      background-color: #000;
+      display: flex;
+      justify-content: center;
+      align-items: center;
+    }
+
+    .controls-container {
+      display: grid;
+      grid-template-columns: repeat(2, 1fr);
+      gap: 20px;
+      padding: 20px;
+    }
+
+    .control-card {
+      background-color: var(--card-bg);
+      padding: 20px;
+      border-radius: 10px;
+      text-align: center;
+    }
+
+    .doorbell-button {
+      background-color: #4169E1;
+      color: white;
+      border: none;
+      border-radius: 50%;
+      width: 80px;
+      height: 80px;
+      margin: 20px auto;
+      cursor: pointer;
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      font-size: 24px;
+      transition: transform 0.3s ease;
+    }
+
+    .doorbell-button.ringing {
+      animation: ring 0.5s ease;
+    }
+
+    @keyframes ring {
+      0%, 100% { transform: rotate(0); }
+      25% { transform: rotate(-15deg); }
+      75% { transform: rotate(15deg); }
+    }
+
+    .mode-selector {
+      display: flex;
+      flex-direction: column;
+      gap: 10px;
+    }
+
+    .mode-button {
+      padding: 10px;
+      border: none;
+      border-radius: 5px;
+      background-color: #4169E1;
+      color: white;
+      cursor: pointer;
+    }
+
+    .theme-toggle {
+      background: none;
+      border: none;
+      color: var(--text-color);
+      font-size: 24px;
+      cursor: pointer;
+    }
+
+    .logout-button {
+      background: none;
+      color: var(--text-color);
+      border: none;
+      padding: 8px;
+      border-radius: 50%;
+      cursor: pointer;
+      width: 40px;
+      height: 40px;
+      display: flex;
+      justify-content: center;
+      align-items: center;
+    }
+
+    .logout-button:hover {
+      background-color: rgba(255, 255, 255, 0.1);
+    }
+
+    .back-button {
+      background: none;
+      border: none;
+      color: var(--text-color);
+      cursor: pointer;
+      padding: 8px;
+      border-radius: 50%;
+    }
+
+    .back-button:hover {
+      background-color: rgba(255, 255, 255, 0.1);
+    }
+
+    /* Examples of elements that should use CSS variables */
+    .some-element {
+      background-color: var(--bg-color);
+      color: var(--text-color);
+    }
+
+    .another-element {
+      border-color: var(--text-color);
+      background-color: var(--login-bg);
+    }
+
+    .fullscreen-button:hover {
+      background-color: rgba(255, 255, 255, 0.1);
+    }
+  </style>
+</head>
+<body>
+  <div class="header">
+    <button class="back-button" id="back-button">
+      <i class="fa fa-arrow-left" style="font-size: 24px;"></i>
+    </button>
+    <button id="theme-toggle" class="theme-toggle-btn">
+      <i class="fa fa-moon-o"></i>
+    </button>
+    <button class="logout-button" id="logout-button">
+      <i class="fa fa-sign-out"></i>
+    </button>
+  </div>
+
+  <div class="camera-container">
+    <div class="camera-feed">
+      <i class="fa fa-video-camera" style="font-size: 48px; opacity: 0.5;"></i>
+    </div>
+  </div>
+
+  <div class="controls-container">
+    <div class="control-card">
+      <h3>Doorbell</h3>
+      <button class="doorbell-button">
+        <i class="fa fa-bell"></i>
+      </button>
+    </div>
+
+    <div class="control-card">
+      <h3>Access Modes</h3>
+      <div class="mode-selector">
+        <button class="mode-button" data-mode="guest">
+          <i class="fa fa-user"></i> Guest Mode
+        </button>
+        <button class="mode-button" data-mode="maid">
+          <i class="fa fa-home"></i> Maid Mode
+        </button>
+        <button class="mode-button" data-mode="otp">
+          <i class="fa fa-key"></i> OTP Mode
+        </button>
+      </div>
+    </div>
+  </div>
+
+  <script>
+    // Theme handling functions
+    function setTheme(theme) {
+        document.documentElement.setAttribute('data-theme', theme);
+        localStorage.setItem('theme', theme);
+    }
+
+    function toggleTheme() {
+        const currentTheme = localStorage.getItem('theme') || 'dark';
+        const newTheme = currentTheme === 'dark' ? 'light' : 'dark';
+        setTheme(newTheme);
+    }
+
+    // Load theme on page load
+    function loadTheme() {
+        const savedTheme = localStorage.getItem('theme') || 'dark';
+        setTheme(savedTheme);
+    }
+
+    // Add fullscreen functionality
+    function requestFullscreen() {
+        const docEl = document.documentElement;
+        
+        if (docEl.requestFullscreen) {
+            docEl.requestFullscreen();
+        } else if (docEl.webkitRequestFullscreen) { /* Safari */
+            docEl.webkitRequestFullscreen();
+        } else if (docEl.msRequestFullscreen) { /* IE11 */
+            docEl.msRequestFullscreen();
+        } else if (docEl.mozRequestFullScreen) { /* Firefox */
+            docEl.mozRequestFullScreen();
+        }
+    }
+
+    // Initialize theme when page loads
+    document.addEventListener('DOMContentLoaded', async function() {
+        loadTheme();
+        
+        // Check if user is logged in
+        if (localStorage.getItem('smartLockLoggedIn') === 'true') {
+            try {
+                // Request fullscreen on page load
+                await document.documentElement.requestFullscreen();
+            } catch (err) {
+                console.log('Could not enter fullscreen:', err);
+            }
+        } else {
+            window.location.href = 'index.html'; // Redirect to login if not logged in
+        }
+
+        // Also try on first user interaction
+        document.addEventListener('click', async function firstClick() {
+            try {
+                await document.documentElement.requestFullscreen();
+            } catch (err) {
+                console.log('Could not enter fullscreen:', err);
+            }
+            document.removeEventListener('click', firstClick);
+        }, { once: true });
+    });
+
+    // Add event listener to your theme toggle button (if you have one)
+    const themeToggleBtn = document.getElementById('theme-toggle');
+    if (themeToggleBtn) {
+        themeToggleBtn.addEventListener('click', toggleTheme);
+    }
+
+    // Doorbell Function with animation only
+    const doorbellButton = document.querySelector('.doorbell-button');
+    doorbellButton.addEventListener('click', () => {
+      doorbellButton.classList.add('ringing');
+      setTimeout(() => {
+        doorbellButton.classList.remove('ringing');
+      }, 500);
+    });
+
+    // Mode Selection
+    const modeButtons = document.querySelectorAll('.mode-button');
+    modeButtons.forEach(button => {
+      button.addEventListener('click', () => {
+        const mode = button.dataset.mode;
+        // Remove active class from all buttons
+        modeButtons.forEach(btn => btn.classList.remove('active'));
+        // Add active class to clicked button
+        button.classList.add('active');
+        // Here you would typically handle the mode change
+        alert(`Switched to ${mode} mode`);
+      });
+    });
+
+    // Logout Function
+    const logoutButton = document.getElementById('logout-button');
+    logoutButton.addEventListener('click', () => {
+      localStorage.removeItem('smartLockLoggedIn');
+      window.location.href = 'index.html';
+    });
+
+    // Back button navigation
+    const backButton = document.getElementById('back-button');
+    backButton.addEventListener('click', () => {
+        window.location.href = 'index.html';
+    });
+  </script>
+</body>
+</html>
