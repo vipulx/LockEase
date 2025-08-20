@@ -1,3 +1,5 @@
+
+captive_portal:
 esphome:
   name: doordash
   friendly_name: DoorDash
@@ -10,14 +12,14 @@ esp32:
 # Enable logging
 logger:
 
--- # Enable Home Assistant API
--- api:
---   encryption:
---     key: "0rR1cNifOJ4A7CzSfwLfX+H6uWZWU59znkl8OtoFJWts=" #0
+# Enable Home Assistant API
+api:
+  encryption:
+    key: "rR1cNifOJ4A7CzSfwLfX+H6uWZWU59znkl8OtoFJWts="
 
--- ota:
---   - platform: esphome
---     password: "009a4224b996964a522cddf9dc9efa810" #0
+ota:
+  - platform: esphome
+    password: "09a4224b996964a522cddf9dc9efa810"
 
 wifi:
   ssid: !secret wifi_ssid
@@ -29,7 +31,17 @@ wifi:
     password: "Xl8dbl2PNe66"
 
 captive_portal:
-    
+
+globals:
+  - id: disarm_code
+    type: std::string
+    restore_value: no
+    initial_value: '"0152"'
+
+  - id: arm_code
+    type: std::string
+    restore_value: no
+    initial_value: '"9999"'
 
 # Keypad Matrix
 matrix_keypad:
@@ -46,38 +58,67 @@ matrix_keypad:
     - pin: GPIO03
   keys: "123A456B789C*0#D"
   has_diodes: True
+  # Keymap (4x4). Adjust if your keypad uses different labels.
 
-# Key Collector
-key_collector:
-  - id: pincode_reader
-    source_id: mykeypad
-    min_length: 4
-    max_length: 4
-    end_keys: "#"
-    end_key_required: True
-    clear_keys: "*"
-    allowed_keys: "0123456789"
-    timeout: 5s
-    on_progress:
-      - logger.log:
-          format: "input progress: '%s', started by '%c'"
-          args: [ 'x.c_str()', "(start == 0 ? '~' : start)" ]
-    on_result:
-      - logger.log:
-          format: "input result: '%s', started by '%c', ended by '%c'"
-          args: [ 'x.c_str()', "(start == 0 ? '~' : start)", "(end == 0 ? '~' : end)" ]
-    on_timeout:
-      - logger.log:
-          format: "input timeout: '%s', started by '%c'"
-          args: [ 'x.c_str()', "(start == 0 ? '~' : start)" ]
+  
+  on_key:
+    then:
+      - lambda: |-
+          static std::string pin_code = "";
+          if (x == '*') { // Clear input
+            pin_code.clear();
+          } else if (x == '#') { // Enter
+            if (pin_code == id(disarm_code)) {
+              id(alarm_control).publish_state("disarm");
+              ESP_LOGI("keypad", "Disarmed!");
+            } else if (pin_code == id(arm_code)) {
+              id(alarm_control).publish_state("arm_away");
+              ESP_LOGI("keypad", "Armed Away!");
+            } else {
+              ESP_LOGW("keypad", "Invalid code!");
+            }
+            pin_code.clear();
+          } else {
+            pin_code.push_back(x);
+          }
 
-# Status Light
-light:
-  - platform: esp32_rmt_led_strip
-    rgb_order: GRB
-    chipset: WS2811
-    pin: GPIO21
-    num_leds: 4
-    name: "Status Light"
-    id: status_light
-    restore_mode: ALWAYS_OFF
+# Alarm control (linked to Alarmo)
+text_sensor:
+  - platform: template
+    id: alarm_control
+    name: "Alarm Control"
+    
+# # Key Collector
+# key_collector:
+#   - id: pincode_reader
+#     source_id: mykeypad
+#     min_length: 4
+#     max_length: 4
+#     end_keys: "#"
+#     end_key_required: True
+#     clear_keys: "*"
+#     allowed_keys: "0123456789"
+#     timeout: 5s
+#     on_progress:
+#       - logger.log:
+#           format: "input progress: '%s', started by '%c'"
+#           args: [ 'x.c_str()', "(start == 0 ? '~' : start)" ]
+#     on_result:
+#       - logger.log:
+#           format: "input result: '%s', started by '%c', ended by '%c'"
+#           args: [ 'x.c_str()', "(start == 0 ? '~' : start)", "(end == 0 ? '~' : end)" ]
+#     on_timeout:
+#       - logger.log:
+#           format: "input timeout: '%s', started by '%c'"
+#           args: [ 'x.c_str()', "(start == 0 ? '~' : start)" ]
+
+# # Status Light
+# light:
+#   - platform: esp32_rmt_led_strip
+#     rgb_order: GRB
+#     chipset: WS2811
+#     pin: GPIO21
+#     num_leds: 4
+#     name: "Status Light"
+#     id: status_light
+#     restore_mode: ALWAYS_OFF
