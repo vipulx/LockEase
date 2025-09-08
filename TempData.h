@@ -89,7 +89,7 @@ text_sensor:
 
   - platform: homeassistant
     id: alarm_status
-    entity_id: alarm_control_panel.your_alarm_entity_id
+    entity_id: alarm_control_panel.alarmo
     internal: true
 
   - platform: wifi_info
@@ -103,15 +103,15 @@ text_sensor:
 matrix_keypad:
   id: my_keypad
   rows:
-    - pin: GPIO2
+    - pin: GPIO5
     - pin: GPIO4
-    - pin: GPIO6
-    - pin: GPIO8
+    - pin: GPIO3
+    - pin: GPIO2
   columns:
+    - pin: GPIO8
     - pin: GPIO9
     - pin: GPIO7
-    - pin: GPIO5
-    - pin: GPIO3
+    - pin: GPIO6
   keys: "123A456B789C*0#D"
   has_diodes: true
 
@@ -150,6 +150,14 @@ key_collector:
             lambda: 'return x != id(disarm_code) && x != id(arm_code);'
           then:
             - logger.log: "Invalid PIN Entered"
+            - light.turn_on:
+                id: status_light
+                red: 100%
+                green: 0
+                blue: 0
+                brightness: 100%
+            - delay: 1s
+            - light.turn_off: status_light
 
 # ------------------------
 # OLED Display (SSD1306 0.96")
@@ -158,7 +166,7 @@ i2c:
   sda: GPIO17
   scl: GPIO18
   scan: true
-  
+
 display:
   - platform: ssd1306_i2c
     model: "SSD1306 128x64"
@@ -167,12 +175,12 @@ display:
     lambda: |-
       if (id(show_welcome)) {
         // Show centered large "EaseLock" welcome message
-        it.printf(0, 16, id(fontd), TextAlign::CENTER, "EaseLock");
+        it.printf(30, 25, id(font3), TextAlign::CENTER, "EaseLock");
       } else {
         // Show time centered at top
-        it.strftime(0, 0, id(fontd), TextAlign::CENTER, "%H:%M:%S", id(home_time).now());
+        it.strftime(5, 20,(fontd), "%H:%M", id(home_time).now());
         // Show Alarm status below time, left aligned
-        it.printf(0, 48, id(font2), "Alarm: %s", id(alarm_status).state.c_str());
+        it.printf(32, 45, id(font2), "%s", id(alarm_status).state.c_str());
       }
 
 
@@ -186,7 +194,7 @@ font:
 
   - file: "ARIAL.TTF"
     id: font2
-    size: 20
+    size: 18
 
   - file: "ARIAL.TTF"
     id: font3
@@ -194,10 +202,22 @@ font:
 
   - file: "fonts/digital-7m.ttf"
     id: fontd
-    size: 43
+    size: 54
 
 # Restart switch to allow restarting from Home Assistant
 switch:
   - platform: restart
     name: "EaseLock ESP Restart"
-    id: esp_restart
+
+binary_sensor:
+  - platform: status
+    name: "Device Status"
+    on_state:
+      then:
+        - light.turn_on:
+            id: status_light
+            red: 0
+            green: 100%
+            blue: 0
+        - delay: 500ms
+        - light.turn_off: status_light
