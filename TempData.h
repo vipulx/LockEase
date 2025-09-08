@@ -42,6 +42,14 @@ globals:
     type: bool
     initial_value: 'true'
 
+  - id: current_pin
+    type: std::string
+    initial_value: ""
+
+  - id: entering_pin_page
+    type: bool
+    initial_value: 'false'
+
 # ------------------------
 # Time
 # ------------------------
@@ -114,6 +122,15 @@ matrix_keypad:
     - pin: GPIO6
   keys: "123A456B789C*0#D"
   has_diodes: true
+  on_key:
+    - lambda: |-
+        if (x != '*' && x != '#') {
+          if (!id(entering_pin_page)) {
+            id(entering_pin_page) = true;
+          }
+          id(current_pin) += x;
+          ESP_LOGD("keypad", "Current PIN input: %s", id(current_pin).c_str());
+        }
 
 key_collector:
   - id: pincode_reader
@@ -121,7 +138,7 @@ key_collector:
     min_length: 4
     max_length: 4
     end_keys: "#"
-    end_key_required: True
+    end_key_required: false
     clear_keys: "*"
     allowed_keys: "0123456789"
     timeout: 5s
@@ -129,35 +146,30 @@ key_collector:
       - text_sensor.template.publish:
           id: entered_pin
           state: !lambda 'return x;'
-      - if:
-          condition:
-            lambda: 'return x == id(disarm_code);'
-          then:
-            - text_sensor.template.publish:
-                id: alarm_control
-                state: "Disarmed"
-            - logger.log: "System Disarmed by PIN"
-      - if:
-          condition:
-            lambda: 'return x == id(arm_code);'
-          then:
-            - text_sensor.template.publish:
-                id: alarm_control
-                state: "Armed"
-            - logger.log: "System Armed by PIN"
-      - if:
-          condition:
-            lambda: 'return x != id(disarm_code) && x != id(arm_code);'
-          then:
-            - logger.log: "Invalid PIN Entered"
-            - light.turn_on:
-                id: status_light
-                red: 100%
-                green: 0
-                blue: 0
-                brightness: 100%
-            - delay: 1s
-            - light.turn_off: status_light
+      - lambda: |-
+          ESP_LOGI("keypad", "Final PIN entered: %s", x.c_str());
+          if (x == id(disarm_code)) {
+            id(alarm_control).publish_state("Disarmed");
+            ESP_LOGI("keypad", "System Disarmed by PIN");
+          } else if (x == id(arm_code)) {
+            id(alarm_control).publish_state("Armed");
+            ESP_LOGI("keypad", "System Armed by PIN");
+          } else {
+            ESP_LOGW("keypad", "Invalid PIN Entered");
+            id(status_light).turn_on();
+          }
+          id(current_pin) = "";
+          id(entering_pin_page) = false;
+
+      - delay: 1s
+      - light.turn_off: status_light
+
+    on_timeout:
+      - lambda: |-
+          ESP_LOGW("keypad", "PIN entry timeout, resetting input");
+          id(current_pin) = "";
+          id(entering_pin_page) = false;
+
 
 # ------------------------
 # OLED Display (SSD1306 0.96")
@@ -174,12 +186,14 @@ display:
     id: oled_display
     lambda: |-
       if (id(show_welcome)) {
-        // Show centered large "EaseLock" welcome message
-        it.printf(30, 25, id(font3), TextAlign::CENTER, "EaseLock");
+        it.printf(70, 25, id(font3), TextAlign::CENTER, "EaseLock");
+      } else if (id(entering_pin_page)) {
+        // Show password entry page
+        it.printf(10, 0, id(font2), "Enter PIN");
+        it.printf(8, 25, id(fontd), "%s", id(current_pin).c_str());
       } else {
-        // Show time centered at top
-        it.strftime(5, 20,(fontd), "%H:%M", id(home_time).now());
-        // Show Alarm status below time, left aligned
+        // Normal home page
+        it.strftime(0, 0, id(fontd), "%H:%M", id(home_time).now());
         it.printf(32, 45, id(font2), "%s", id(alarm_status).state.c_str());
       }
 
