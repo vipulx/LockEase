@@ -106,6 +106,45 @@ text_sensor:
       id: my_ip
 
 # ------------------------
+# RFID RC522
+# ------------------------
+spi:
+  clk_pin: GPIO36   # SCK
+  mosi_pin: GPIO34  # MOSI
+  miso_pin: GPIO33  # MISO
+
+
+rc522_spi:
+  cs_pin: GPIO35 #SDA
+  update_interval: 1s
+  id: my_rfid
+  on_tag:
+    then:
+      - text_sensor.template.publish:
+          id: last_rfid
+          state: !lambda 'return x;'
+      - lambda: |-
+          ESP_LOGI("rfid", "RFID Tag detected: %s", x.c_str());
+
+          // Example: Allow specific RFID UIDs
+          if (x == "32-CA-68-3F" || x == "42-11-E0-3F") {
+            id(alarm_control).publish_state("Disarmed");
+            ESP_LOGI("rfid", "System Disarmed by RFID");
+          } else {
+            id(status_light).turn_on();
+            ESP_LOGW("rfid", "Unauthorized RFID: %s", x.c_str());
+          }
+
+      - delay: 1s
+      - light.turn_off: status_light
+
+  on_tag_removed:
+    then:
+      - lambda: |-
+          ESP_LOGI("rfid", "RFID Tag removed");
+
+
+# ------------------------
 # Keypad Matrix (4x4)
 # ------------------------
 matrix_keypad:
