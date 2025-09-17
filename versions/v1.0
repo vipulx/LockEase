@@ -59,13 +59,14 @@ globals:
   - id: show_message
     type: bool
     initial_value: 'false'
+  - id: last_interaction
+    type: int
+    initial_value: '0'
 
 output:
   - platform: gpio
     pin: GPIO15
     id: onboard_led
-    
-
 
 # -----------------------------
 # Time
@@ -74,15 +75,25 @@ time:
   - platform: homeassistant
     id: home_time
 
-
 # ------------------------
-# Interval to remove welcome screen after 5s
+# Interval Tasks
 # ------------------------
 interval:
+  # Hide welcome screen after 8s
   - interval: 8s
     then:
       - lambda: |-
           id(show_welcome) = false;
+
+  # Auto-return to home page after 10s of inactivity
+  - interval: 1s
+    then:
+      - lambda: |-
+          if (!id(show_welcome)) {
+            if ((millis() / 1000 - id(last_interaction)) > 10) {
+              id(current_page) = 0;
+            }
+          }
 
 # ------------------------
 # Lights
@@ -138,6 +149,7 @@ text_sensor:
         - lambda: |-
             id(message_text) = x;
             id(show_message) = true;
+            id(last_interaction) = millis() / 1000;
         - delay: 5s
         - lambda: |-
             id(show_message) = false;
@@ -158,6 +170,7 @@ rc522_spi:
     then:
       - lambda: |-
           id(rfid_page) = true;
+          id(last_interaction) = millis() / 1000;
           id(last_rfid).publish_state(x);
           if (x == "32-CA-68-3F" || x == "42-11-E0-3F") {
             id(alarm_control).publish_state("Disarmed");
@@ -190,7 +203,11 @@ matrix_keypad:
   has_diodes: true
   on_key:
     - lambda: |-
-        if (x == 'A') { id(current_page)--; if (id(current_page) < 0) id(current_page) = 4; }
+        id(last_interaction) = millis() / 1000;
+        if (id(show_welcome)) {
+          id(show_welcome) = false;
+          id(current_page) = 0;
+        } else if (x == 'A') { id(current_page)--; if (id(current_page) < 0) id(current_page) = 4; }
         else if (x == 'B') { id(current_page)++; if (id(current_page) > 4) id(current_page) = 0; }
         else if (x == 'C') { id(current_page) = (id(current_page)+1) % 5; }
         else if (x == 'D') { id(current_page) = (id(current_page)-1+5) % 5; }
@@ -215,6 +232,7 @@ key_collector:
           id: entered_pin
           state: !lambda 'return x;'
       - lambda: |-
+          id(last_interaction) = millis() / 1000;
           if (x == id(disarm_code)) {
             id(alarm_control).publish_state("Disarmed");
           } else if (x == id(arm_code)) {
