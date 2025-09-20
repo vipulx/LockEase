@@ -29,7 +29,7 @@ wifi:
 captive_portal:
 
 # ------------------------
-# Globals
+# Globals (extended)
 # ------------------------
 globals:
   - id: disarm_code
@@ -43,7 +43,7 @@ globals:
     initial_value: ""
   - id: current_page
     type: int
-    initial_value: '0'   # 0=Home,1=Info,2=HA,3=Coming1,4=Coming2
+    initial_value: '0'
   - id: show_welcome
     type: bool
     initial_value: 'true'
@@ -62,11 +62,19 @@ globals:
   - id: last_interaction
     type: int
     initial_value: '0'
+  - id: display_on              # ✅ new (for possible screen toggle later)
+    type: bool
+    initial_value: 'true'
+
+# -------------------
+# Outputs
+# -------------------
 
 output:
   - platform: gpio
     pin: GPIO15
     id: onboard_led
+    
 
 # -----------------------------
 # Time
@@ -114,6 +122,7 @@ light:
     id: Onboard_status_light
     restore_mode: ALWAYS_OFF
 
+
 # ------------------------
 # Text Sensors
 # ------------------------
@@ -140,19 +149,13 @@ text_sensor:
       name: "LockEase IP"
       id: my_ip
 
-  # HA message push
+  # ✅ HA message push (changed to use script for reliable clearing)
   - platform: homeassistant
     id: ha_message
-    entity_id: sensor.esp_message
+    entity_id: input_text.oled_message
     on_value:
       then:
-        - lambda: |-
-            id(message_text) = x;
-            id(show_message) = true;
-            id(last_interaction) = millis() / 1000;
-        - delay: 5s
-        - lambda: |-
-            id(show_message) = false;
+        - script.execute: show_temp_message
 
 # ------------------------
 # RFID RC522
@@ -270,21 +273,57 @@ i2c:
   scl: GPIO18
   scan: true
 
+# ------------------------
+# OLED Display (SSD1306 0.96")
+# ------------------------
 display:
   - platform: ssd1306_i2c
     model: "SSD1306 128x64"
     address: 0x3C
     id: oled_display
     lambda: |-
-      if (id(show_message)) {
+      if (!id(display_on)) {
         it.fill(COLOR_OFF);
-        it.printf(64, 30, id(font2), TextAlign::CENTER, "%s", id(message_text).c_str());
         return;
       }
 
+      if (id(show_message)) {
+        it.fill(COLOR_OFF);
+
+        // ✅ wrapped message display
+        auto wrap_text = [&](std::string text, int max_chars, int start_y, int line_height) {
+          std::string line;
+          int y = start_y;
+          int count = 0;
+
+          for (char c : text) {
+            if ((c == ' ' && count >= max_chars-1) || count >= max_chars) {
+              it.printf(64, y, id(fontmess), TextAlign::CENTER, "%s", line.c_str());
+              line.clear();
+              count = 0;
+              y += line_height;
+              if (y > 64) break;
+              continue;
+            }
+
+            line.push_back(c);
+            count++;
+          }
+
+          if (!line.empty() && y <= 64) {
+            it.printf(64, y, id(fontmess), TextAlign::CENTER, "%s", line.c_str());
+          }
+        };
+
+        wrap_text(id(message_text), 12, 0, 14);  // max 12 chars per line
+        return;
+      }
+
+      // ✅ rest of your existing display pages untouched
       if (id(show_welcome)) {
         it.fill(COLOR_OFF);
-        it.printf(64, 30, id(font3), TextAlign::CENTER, "LockEase v1.0");
+        it.printf(64, 25, id(font3), TextAlign::CENTER, "LockEase");
+        it.printf(64, 45, id(font3), TextAlign::CENTER, "v1.0");
       } 
       else if (id(entering_pin_page)) {
         it.fill(COLOR_OFF);
@@ -298,7 +337,7 @@ display:
       }
       else {
         if (id(current_page) == 0) {
-          it.strftime(0, 0, id(fontd), "%H:%M", id(home_time).now());
+          it.strftime(64, 32, id(fontd), TextAlign::CENTER, "%H:%M", id(home_time).now());
           it.printf(64, 55, id(font2), TextAlign::CENTER, "%s", id(alarm_status).state.c_str());
         }
         else if (id(current_page) == 1) {
@@ -319,7 +358,6 @@ display:
           it.printf(64, 32, id(font2), TextAlign::CENTER, "Coming Soon 2");
         }
       }
-
 # ------------------------
 # Fonts
 # ------------------------
@@ -339,6 +377,10 @@ font:
   - file: "fonts/digital-7m.ttf"
     id: fontd
     size: 44
+
+  - file: "fonts/digital-7m.ttf"
+    id: fontmess
+    size: 24
 
 # ------------------------
 # Binary Sensor (Status)
@@ -361,3 +403,22 @@ sensor:
     name: "WiFi Signal"
     id: wifi_strength
     update_interval: 60s
+
+
+
+# ------------------------
+# Scripts
+# ------------------------
+script:
+  - id: show_temp_message
+    mode: restart
+    then:
+      - lambda: |-
+          id(message_text) = id(ha_message).state;
+          id(show_message) = true;
+          id(last_interaction) = millis() / 1000;
+      - component.update: oled_display
+      - delay: 5s
+      - lambda: |-
+          id(show_message) = false;
+      - component.update: oled_display
