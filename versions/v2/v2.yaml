@@ -1,0 +1,570 @@
+esphome:
+  name: doordash
+  friendly_name: LockEase
+
+esp32:
+  board: lolin_s2_mini
+  framework:
+    type: esp-idf
+
+# Enable logging
+logger:
+
+# Enable Home Assistant API
+api:
+  id: homeassistant_api
+  encryption:
+    key: "rR1cNifOJ4A7CzSfwLfX+H6uWZWU59znkl8OtoFJWts="
+
+ota:
+  - platform: esphome
+    password: "09a4224b996964a522cddf9dc9efa810"
+
+
+wifi:
+  ssid: !secret wifi_ssid
+  password: !secret wifi_password
+  ap:
+    ssid: "LockEase v1.0"
+    password: "Xl8dbl2PNe66"
+captive_portal:
+# ------------------------
+# Globals
+# ------------------------
+globals:
+  - id: disarm_code
+    type: std::string
+    initial_value: '"0152"'
+  - id: arm_code
+    type: std::string
+    initial_value: '"9999"'
+  - id: admin_code
+    type: std::string
+    initial_value: '"2468"'
+  - id: current_pin
+    type: std::string
+    initial_value: ""
+  - id: current_page
+    type: int
+    initial_value: '0'
+  - id: show_welcome
+    type: bool
+    initial_value: 'true'
+  - id: entering_pin_page
+    type: bool
+    initial_value: 'false'
+  - id: rfid_page
+    type: bool
+    initial_value: 'false'
+  - id: message_text
+    type: std::string
+    initial_value: ""
+  - id: show_message
+    type: bool
+    initial_value: 'false'
+  - id: last_interaction
+    type: int
+    initial_value: '0'
+  - id: display_on
+    type: bool
+    initial_value: 'true'
+  - id: admin_entry_mode
+    type: bool
+    initial_value: 'false'
+  - id: admin_unlocked
+    type: bool
+    initial_value: 'false'
+  - id: admin_unlocked_until
+    type: int
+    initial_value: '0'
+  - id: message_ttl
+    type: int
+    initial_value: '0'
+  - id: failed_attempts
+    type: int
+    initial_value: '0'
+  - id: lockout_until
+    type: int
+    initial_value: '0'
+
+# -------------------
+# Outputs
+# -------------------
+output:
+  - platform: gpio
+    pin: GPIO15
+    id: onboard_led
+
+# -----------------------------
+# Time
+# -----------------------------
+time:
+  - platform: homeassistant
+    id: home_time
+
+# ------------------------
+# Interval Tasks
+# ------------------------
+interval:
+  - interval: 8s
+    then:
+      - lambda: |-
+          id(show_welcome) = false;
+  - interval: 1s
+    then:
+      - lambda: |-
+          if (!id(show_welcome)) {
+            if ((millis() / 1000 - id(last_interaction)) > 10) {
+              id(current_page) = 0;
+            }
+          }
+          if (id(admin_unlocked)) {
+            if ((int)(millis() / 1000) > id(admin_unlocked_until)) {
+              id(admin_unlocked) = false;
+              id(message_text) = "Admin Locked";
+              id(show_message) = true;
+              id(message_ttl) = (int)(millis() / 1000) + 2;
+            }
+          }
+          if (id(show_message) && id(message_ttl) > 0) {
+            if ((int)(millis() / 1000) > id(message_ttl)) {
+              id(show_message) = false;
+              id(message_text) = "";
+              id(message_ttl) = 0;
+            }
+          }
+          if (id(lockout_until) > 0 && (int)(millis() / 1000) > id(lockout_until)) {
+            id(failed_attempts) = 0;
+            id(lockout_until) = 0;
+            id(message_text) = "Lockout Expired";
+            id(show_message) = true;
+            id(message_ttl) = (int)(millis() / 1000) + 2;
+          }
+
+# ------------------------
+# Lights
+# ------------------------
+light:
+  - platform: esp32_rmt_led_strip
+    rgb_order: GRB
+    chipset: WS2812
+    pin: GPIO16
+    num_leds: 3
+    name: "Status Light"
+    id: status_light
+    restore_mode: ALWAYS_OFF
+  - platform: binary
+    name: "Onboard LED"
+    output: onboard_led
+    id: Onboard_status_light
+    restore_mode: ALWAYS_OFF
+
+# ------------------------
+# Text Sensors
+# ------------------------
+text_sensor:
+  - platform: template
+    id: alarm_control
+    name: "Alarm Control"
+  - platform: template
+    id: entered_pin
+    name: "Entered PIN"
+  - platform: template
+    id: last_rfid
+    name: "Last RFID Tag"
+  - platform: homeassistant
+    id: alarm_status
+    entity_id: alarm_control_panel.alarmo
+    internal: true
+  - platform: wifi_info
+    ip_address:
+      name: "LockEase IP"
+      id: my_ip
+  - platform: homeassistant
+    id: ha_message
+    entity_id: input_text.oled_message
+    on_value:
+      then:
+        - script.execute: show_temp_message
+
+# ------------------------
+# Scripts
+# ------------------------
+script:
+  - id: show_temp_message
+    mode: restart
+    then:
+      - lambda: |-
+          id(message_text) = id(ha_message).state;
+          id(show_message) = true;
+          id(last_interaction) = millis() / 1000;
+          id(message_ttl) = (int)(millis() / 1000) + 5;
+      - component.update: oled_display
+  - id: admin_action_1
+    then:
+      - text_sensor.template.publish:
+          id: alarm_control
+          state: "Disarmed"
+      - lambda: |-
+          id(message_text) = "Alarm Disarmed!";
+          id(show_message) = true;
+          id(message_ttl) = (int)(millis() / 1000) + 2;
+  - id: admin_action_2
+    then:
+      - lambda: |-
+          id(display_on) = !id(display_on);
+          if (id(display_on)) {
+            id(message_text) = "Display ON";
+          } else {
+            id(message_text) = "Display OFF";
+          }
+          id(show_message) = true;
+          id(message_ttl) = (int)(millis() / 1000) + 2;
+  - id: admin_action_3
+    then:
+      - switch.turn_on: lock_relay
+      - delay: 5s
+      - switch.turn_off: lock_relay
+      - lambda: |-
+          id(message_text) = "Lock Toggled";
+          id(show_message) = true;
+          id(message_ttl) = (int)(millis() / 1000) + 2;
+
+# ------------------------
+# RFID RC522
+# ------------------------
+spi:
+  clk_pin: GPIO36
+  mosi_pin: GPIO34
+  miso_pin: GPIO33
+
+rc522_spi:
+  cs_pin: GPIO35
+  update_interval: 1s
+  id: my_rfid
+  on_tag:
+    then:
+      - lambda: |-
+          id(rfid_page) = true;
+          id(last_interaction) = millis() / 1000;
+          id(last_rfid).publish_state(x);
+          if (x == "32-CA-68-3F" || x == "42-11-E0-3F") {
+            id(alarm_control).publish_state("Disarmed");
+            id(message_text) = "Access Granted";
+          } else {
+            id(message_text) = "Access Denied";
+          }
+          id(show_message) = true;
+          id(message_ttl) = (int)(millis() / 1000) + 3;
+      - delay: 3s
+      - lambda: |-
+          id(rfid_page) = false;
+          id(show_message) = false;
+          id(message_ttl) = 0;
+
+# ------------------------
+# Keypad Matrix (4x4)
+# ------------------------
+matrix_keypad:
+  id: my_keypad
+  rows:
+    - pin: GPIO5
+    - pin: GPIO4
+    - pin: GPIO3
+    - pin: GPIO2
+  columns:
+    - pin: GPIO8
+    - pin: GPIO9
+    - pin: GPIO7
+    - pin: GPIO6
+  keys: "123A456B789C*0#D"
+  has_diodes: true
+  on_key:
+    - lambda: |-
+        id(last_interaction) = millis() / 1000;
+        static unsigned long last_special_time = 0;
+        static char last_special = 0;
+        unsigned long now = millis();
+        if (last_special == 'A' && x == 'B' && (now - last_special_time) < 2000) {
+          if (id(admin_unlocked)) {
+            id(current_page) = 5;
+            return;
+          }
+          id(admin_entry_mode) = true;
+          id(message_text) = "Enter Admin PIN";
+          id(show_message) = true;
+          id(message_ttl) = (int)(millis() / 1000) + 20;
+          id(last_interaction) = millis() / 1000;
+          id(current_pin) = "";
+          return;
+        }
+        if (x == 'A' || x == 'B') {
+          last_special = x;
+          last_special_time = now;
+        } else {
+          last_special = 0;
+          last_special_time = 0;
+        }
+        if (id(show_welcome)) {
+          id(show_welcome) = false;
+          id(current_page) = 0;
+          return;
+        }
+        if (x >= '0' && x <= '9') {
+          id(entering_pin_page) = true;
+          id(current_pin) += x;
+          return;
+        }
+        if ((x == 'A' || x == 'B' || x == 'C' || x == 'D') && !id(admin_unlocked)) {
+          id(message_text) = "Admin Locked";
+          id(show_message) = true;
+          id(message_ttl) = (int)(millis() / 1000) + 2;
+          return;
+        }
+        if (x == 'A') {
+          id(current_page)--;
+          if (id(current_page) < 0) id(current_page) = 5;
+        } else if (x == 'B') {
+          id(current_page)++;
+          if (id(current_page) > 5) id(current_page) = 0;
+        } else if (x == 'C') {
+          id(current_page) = (id(current_page) + 1) % 6;
+        } else if (x == 'D') {
+          id(current_page) = (id(current_page) - 1 + 6) % 6;
+        }
+
+# ------------------------
+# Key Collectors
+# ------------------------
+key_collector:
+  - id: pincode_reader
+    source_id: my_keypad
+    min_length: 4
+    max_length: 4
+    end_keys: "#"
+    clear_keys: "*"
+    allowed_keys: "0123456789"
+    timeout: 5s
+    on_result:
+      - lambda: |-
+          if (id(admin_entry_mode)) {
+            id(current_pin) = "";
+            id(entering_pin_page) = false;
+            return;
+          }
+          id(last_interaction) = millis() / 1000;
+          id(entered_pin).publish_state(x);
+          if (x == id(disarm_code)) {
+            id(alarm_control).publish_state("Disarmed");
+          } else if (x == id(arm_code)) {
+            id(alarm_control).publish_state("Armed");
+          } else {
+            id(status_light).turn_on();
+          }
+          id(current_pin) = "";
+          id(entering_pin_page) = false;
+      - delay: 1s
+      - light.turn_off: status_light
+    on_timeout:
+      - lambda: |-
+          id(current_pin) = "";
+          id(entering_pin_page) = false;
+  - id: admin_pincode_reader
+    source_id: my_keypad
+    min_length: 4
+    max_length: 4
+    end_keys: "#"
+    clear_keys: "*"
+    allowed_keys: "0123456789"
+    timeout: 20s
+    on_result:
+      - lambda: |-
+          if (!id(admin_entry_mode)) {
+            return;
+          }
+          id(admin_entry_mode) = false;
+          id(last_interaction) = millis() / 1000;
+          if (x == id(admin_code)) {
+            id(admin_unlocked) = true;
+            id(admin_unlocked_until) = (int)(millis() / 1000) + 60;
+            id(message_text) = "Admin Access Granted";
+            id(show_message) = true;
+            id(message_ttl) = (int)(millis() / 1000) + 2;
+          } else {
+            id(message_text) = "Wrong Admin Code";
+            id(show_message) = true;
+            id(message_ttl) = (int)(millis() / 1000) + 2;
+          }
+      - delay: 2s
+      - lambda: |-
+          id(show_message) = false;
+          id(message_ttl) = 0;
+    on_timeout:
+      - lambda: |-
+          id(admin_entry_mode) = false;
+          id(message_text) = "Admin Timeout";
+          id(show_message) = true;
+          id(message_ttl) = (int)(millis() / 1000) + 2;
+      - delay: 2s
+      - lambda: |-
+          id(show_message) = false;
+          id(message_ttl) = 0;
+
+# ------------------------
+# Relay for Lock
+# ------------------------
+switch:
+  - platform: gpio
+    pin: GPIO19
+    id: lock_relay
+    name: "Lock Relay"
+    restore_mode: RESTORE_DEFAULT_OFF
+  - platform: restart
+    name: "EaseLock ESP Restart"
+i2c:
+  sda: GPIO17
+  scl: GPIO18
+  scan: true
+
+# ------------------------
+# OLED Display (SSD1306 0.96")
+# ------------------------
+display:
+  - platform: ssd1306_i2c
+    model: "SSD1306 128x64"
+    address: 0x3C
+    id: oled_display
+    lambda: |-
+      if (!id(display_on)) {
+        it.fill(COLOR_OFF);
+        return;
+      }
+      
+      if (id(show_message)) {
+        it.fill(COLOR_OFF);
+        auto wrap_text = [&](std::string text, int max_chars, int start_y, int line_height) {
+          std::string line;
+          int y = start_y;
+          int count = 0;
+          for (char c : text) {
+            if ((c == ' ' && count >= max_chars-1) || count >= max_chars) {
+              it.printf(64, y, id(fontdsmall), TextAlign::CENTER, "%s", line.c_str());
+              line.clear();
+              count = 0;
+              y += line_height;
+              if (y > 64) break;
+              continue;
+            }
+            line.push_back(c);
+            count++;
+          }
+          if (!line.empty() && y <= 64) {
+            it.printf(64, y, id(fontdsmall), TextAlign::CENTER, "%s", line.c_str());
+          }
+        };
+        wrap_text(id(message_text), 12, 10, 19);
+        return;
+      }
+
+      if (id(admin_entry_mode)) {
+        it.fill(COLOR_OFF);
+        it.printf(64, 10, id(font2), TextAlign::CENTER, "Admin Access");
+        it.printf(64, 40, id(fontdMedium), TextAlign::CENTER, "%s", id(current_pin).c_str());
+        return;
+      }
+
+      if (id(show_welcome)) {
+        it.fill(COLOR_OFF);
+        it.printf(64, 25, id(font3), TextAlign::CENTER, "LockEase");
+        it.printf(64, 50, id(fontdsmall), TextAlign::CENTER, "v1.0");
+        return;
+      }
+
+      if (id(entering_pin_page)) {
+        it.fill(COLOR_OFF);
+        it.printf(64, 10, id(font2), TextAlign::CENTER, "Enter PIN");
+        it.printf(64, 40, id(fontdMedium), TextAlign::CENTER, "%s", id(current_pin).c_str());
+        return;
+      }
+
+      if (id(rfid_page)) {
+        it.fill(COLOR_OFF);
+        it.printf(64, 20, id(font2), TextAlign::CENTER, "Scanning...");
+        it.printf(64, 45, id(font1), TextAlign::CENTER, "Place your card");
+        return;
+      }
+      
+      switch (id(current_page)) {
+        case 0:
+          it.strftime(64, 25, id(fontdMedium), TextAlign::CENTER, "%H:%M", id(home_time).now());
+          it.printf(64, 55, id(font2), TextAlign::CENTER, "%s", id(alarm_status).state.c_str());
+          break;
+        case 1:
+          it.printf(0, 0, id(font1), "Device Info");
+          it.printf(0, 15, id(font1), "WiFi: %s", id(my_ip).state.c_str());
+          it.printf(0, 30, id(font1), "Signal: %.0f dBm", id(wifi_strength).state);
+          it.printf(0, 45, id(font1), "Lock: %s", id(lock_relay).state ? "Unlocked" : "Locked");
+          break;
+        case 2:
+          it.printf(64, 10, id(font2), TextAlign::CENTER, "HA Data");
+          it.printf(64, 30, id(font1), TextAlign::CENTER, "Entity 1: ...");
+          it.printf(64, 45, id(font1), TextAlign::CENTER, "Entity 2: ...");
+          break;
+        case 3:
+        case 4:
+          it.printf(64, 32, id(font2), TextAlign::CENTER, "Coming Soon");
+          break;
+        case 5:
+          it.fill(COLOR_OFF);
+          if (id(admin_unlocked)) {
+            it.printf(64, 8, id(font2), TextAlign::CENTER, "Admin Menu");
+            it.printf(64, 26, id(font1), TextAlign::CENTER, "1) Disarm Alarm");
+            it.printf(64, 42, id(font1), TextAlign::CENTER, "2) Toggle Display");
+            it.printf(64, 58, id(font1), TextAlign::CENTER, "3) Toggle Lock");
+          } else {
+            it.printf(64, 32, id(font2), TextAlign::CENTER, "Admin Locked");
+          }
+          break;
+        default:
+          break;
+      }
+
+font:
+  - file: "ARIAL.TTF"
+    id: font1
+    size: 12
+  - file: "ARIAL.TTF"
+    id: font2
+    size: 18
+  - file: "ARIAL.TTF"
+    id: font3
+    size: 24
+  - file: "fonts/digital-7m.ttf"
+    id: fontdMedium
+    size: 44
+  - file: "fonts/digital-7m.ttf"
+    id: fontdsmall
+    size: 24
+
+sensor:
+  - platform: wifi_signal
+    name: "LockEase WiFi Signal"
+    id: wifi_strength
+    update_interval: 60s
+  - platform: internal_temperature
+    name: "LockEase CPU Temperature"
+  - platform: uptime
+    name: "Uptime"
+
+binary_sensor:
+  - platform: status
+    name: "LockEase Device Status"
+    on_state:
+      then:
+        - light.turn_on:
+            id: status_light
+            red: 0
+            green: 100%
+            blue: 0
+        - delay: 500ms
+        - light.turn_off: status_light
