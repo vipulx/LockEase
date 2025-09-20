@@ -29,7 +29,7 @@ wifi:
 captive_portal:
 
 # ------------------------
-# Globals (extended)
+# Globals
 # ------------------------
 globals:
   - id: disarm_code
@@ -43,7 +43,7 @@ globals:
     initial_value: ""
   - id: current_page
     type: int
-    initial_value: '0'
+    initial_value: '0'   # 0=Home,1=Info,2=HA,3=Coming1,4=Coming2,5=AdminMenu
   - id: show_welcome
     type: bool
     initial_value: 'true'
@@ -62,19 +62,36 @@ globals:
   - id: last_interaction
     type: int
     initial_value: '0'
-  - id: display_on              # ✅ new (for possible screen toggle later)
+  - id: display_on
     type: bool
     initial_value: 'true'
+
+  # Admin-related globals
+  - id: admin_code
+    type: std::string
+    initial_value: '"2468"'   # <-- set your admin PIN here (4 digits)
+  - id: admin_entry_mode
+    type: bool
+    initial_value: 'false'   # true while entering admin PIN
+  - id: admin_unlocked
+    type: bool
+    initial_value: 'false'   # true when admin unlocked
+  - id: admin_unlocked_until
+    type: int
+    initial_value: '0'       # epoch seconds when admin lock expires
+
+  # System message TTL (epoch seconds). Used to auto-clear short system messages.
+  - id: message_ttl
+    type: int
+    initial_value: '0'
 
 # -------------------
 # Outputs
 # -------------------
-
 output:
   - platform: gpio
     pin: GPIO15
     id: onboard_led
-    
 
 # -----------------------------
 # Time
@@ -93,13 +110,34 @@ interval:
       - lambda: |-
           id(show_welcome) = false;
 
-  # Auto-return to home page after 10s of inactivity
+  # Auto-return to home page after 10s of inactivity, admin auto-expire, and message TTL clear
   - interval: 1s
     then:
       - lambda: |-
+          // auto-return pages
           if (!id(show_welcome)) {
             if ((millis() / 1000 - id(last_interaction)) > 10) {
               id(current_page) = 0;
+            }
+          }
+
+          // Auto-expire admin unlock
+          if (id(admin_unlocked)) {
+            if ((int)(millis() / 1000) > id(admin_unlocked_until)) {
+              id(admin_unlocked) = false;
+              // show admin locked message briefly
+              id(message_text) = "Admin Locked";
+              id(show_message) = true;
+              id(message_ttl) = (int)(millis() / 1000) + 2;
+            }
+          }
+
+          // Clear temporary messages by TTL
+          if (id(show_message) && id(message_ttl) > 0) {
+            if ((int)(millis() / 1000) > id(message_ttl)) {
+              id(show_message) = false;
+              id(message_text) = "";
+              id(message_ttl) = 0;
             }
           }
 
@@ -121,7 +159,6 @@ light:
     output: onboard_led
     id: Onboard_status_light
     restore_mode: ALWAYS_OFF
-
 
 # ------------------------
 # Text Sensors
@@ -149,13 +186,28 @@ text_sensor:
       name: "LockEase IP"
       id: my_ip
 
-  # ✅ HA message push (changed to use script for reliable clearing)
+  # HA message from Home Assistant
   - platform: homeassistant
     id: ha_message
     entity_id: input_text.oled_message
     on_value:
       then:
         - script.execute: show_temp_message
+
+# ------------------------
+# Scripts
+# ------------------------
+script:
+  - id: show_temp_message
+    mode: restart
+    then:
+      - lambda: |-
+          id(message_text) = id(ha_message).state;
+          id(show_message) = true;
+          id(last_interaction) = millis() / 1000;
+          // set TTL to auto clear after 5s
+          id(message_ttl) = (int)(millis() / 1000) + 5;
+      - component.update: oled_display
 
 # ------------------------
 # RFID RC522
@@ -182,10 +234,12 @@ rc522_spi:
             id(message_text) = "Access Denied";
           }
           id(show_message) = true;
+          id(message_ttl) = (int)(millis() / 1000) + 3;
       - delay: 3s
       - lambda: |-
           id(rfid_page) = false;
           id(show_message) = false;
+          id(message_ttl) = 0;
 
 # ------------------------
 # Keypad Matrix (4x4)
@@ -206,21 +260,78 @@ matrix_keypad:
   has_diodes: true
   on_key:
     - lambda: |-
+        // update last interaction time
         id(last_interaction) = millis() / 1000;
+
+        static unsigned long last_special_time = 0;
+        static char last_special = 0;
+        unsigned long now = millis();
+
+        // --- Admin entry sequence detection (A -> B within 2 seconds)
+        if (last_special == 'A' && x == 'B' && (now - last_special_time) < 2000) {
+          // If already admin unlocked, go to Admin Menu page immediately
+          if (id(admin_unlocked)) {
+            id(current_page) = 5; // admin menu page
+            return;
+          }
+          // Otherwise start admin PIN entry mode (works even when locked)
+          id(admin_entry_mode) = true;
+          id(message_text) = "Enter Admin PIN";
+          id(show_message) = true;
+          id(message_ttl) = (int)(millis() / 1000) + 20; // give some time to enter PIN
+          id(last_interaction) = millis() / 1000;
+          id(current_pin) = "";
+          return;
+        }
+
+        // store special keys for sequence detection (only A and B are used)
+        if (x == 'A' || x == 'B') {
+          last_special = x;
+          last_special_time = now;
+        } else {
+          // non-special key resets special tracking
+          last_special = 0;
+          last_special_time = 0;
+        }
+
+        // If welcome is showing, pressing any key exits it
         if (id(show_welcome)) {
           id(show_welcome) = false;
           id(current_page) = 0;
-        } else if (x == 'A') { id(current_page)--; if (id(current_page) < 0) id(current_page) = 4; }
-        else if (x == 'B') { id(current_page)++; if (id(current_page) > 4) id(current_page) = 0; }
-        else if (x == 'C') { id(current_page) = (id(current_page)+1) % 5; }
-        else if (x == 'D') { id(current_page) = (id(current_page)-1+5) % 5; }
-        else {
-          if (x != '*' && x != '#') {
-            id(entering_pin_page) = true;
-            id(current_pin) += x;
-          }
+          return;
         }
 
+        // If numeric key -> PIN entry (always allowed)
+        if (x != '*' && x != '#' && x >= '0' && x <= '9') {
+          id(entering_pin_page) = true;
+          id(current_pin) += x;
+          return;
+        }
+
+        // If navigation keys pressed while admin is locked -> block and show message
+        if ((x == 'A' || x == 'B' || x == 'C' || x == 'D') && !id(admin_unlocked)) {
+          id(message_text) = "Admin Locked";
+          id(show_message) = true;
+          id(message_ttl) = (int)(millis() / 1000) + 2; // clear after ~2s
+          return;
+        }
+
+        // Normal navigation allowed only when admin_unlocked == true
+        if (x == 'A') {
+          id(current_page)--;
+          if (id(current_page) < 0) id(current_page) = 5;
+        } else if (x == 'B') {
+          id(current_page)++;
+          if (id(current_page) > 5) id(current_page) = 0;
+        } else if (x == 'C') {
+          id(current_page) = (id(current_page) + 1) % 6;
+        } else if (x == 'D') {
+          id(current_page) = (id(current_page) - 1 + 6) % 6;
+        }
+
+# ------------------------
+# Key Collectors
+# ------------------------
 key_collector:
   - id: pincode_reader
     source_id: my_keypad
@@ -231,6 +342,14 @@ key_collector:
     allowed_keys: "0123456789"
     timeout: 5s
     on_result:
+      - lambda: |-
+          // If admin entry is active, ignore this collector (admin collector handles PIN)
+          if (id(admin_entry_mode)) {
+            // clear any accidental captured pin and return
+            id(current_pin) = "";
+            id(entering_pin_page) = false;
+            return;
+          }
       - text_sensor.template.publish:
           id: entered_pin
           state: !lambda 'return x;'
@@ -251,6 +370,51 @@ key_collector:
       - lambda: |-
           id(current_pin) = "";
           id(entering_pin_page) = false;
+
+  # Admin PIN collector (same keypad source, but only processed if admin_entry_mode is true)
+  - id: admin_pincode_reader
+    source_id: my_keypad
+    min_length: 4
+    max_length: 4
+    end_keys: "#"
+    clear_keys: "*"
+    allowed_keys: "0123456789"
+    timeout: 20s
+    on_result:
+      - lambda: |-
+          // Only handle admin PIN if admin_entry_mode is active
+          if (!id(admin_entry_mode)) {
+            return;
+          }
+          id(admin_entry_mode) = false;
+          id(last_interaction) = millis() / 1000;
+          if (x == id(admin_code)) {
+            id(admin_unlocked) = true;
+            id(admin_unlocked_until) = (int)(millis() / 1000) + 60; // unlocked for 60 seconds
+            id(message_text) = "Admin Access Granted";
+            id(show_message) = true;
+            id(message_ttl) = (int)(millis() / 1000) + 2;
+          } else {
+            id(message_text) = "Wrong Admin Code";
+            id(show_message) = true;
+            id(message_ttl) = (int)(millis() / 1000) + 2;
+          }
+      - delay: 2s
+      - lambda: |-
+          id(show_message) = false;
+          id(message_ttl) = 0;
+
+    on_timeout:
+      - lambda: |-
+          // exit admin entry mode on timeout
+          id(admin_entry_mode) = false;
+          id(message_text) = "Admin Timeout";
+          id(show_message) = true;
+          id(message_ttl) = (int)(millis() / 1000) + 2;
+      - delay: 2s
+      - lambda: |-
+          id(show_message) = false;
+          id(message_ttl) = 0;
 
 # ------------------------
 # Relay for Lock
@@ -273,9 +437,6 @@ i2c:
   scl: GPIO18
   scan: true
 
-# ------------------------
-# OLED Display (SSD1306 0.96")
-# ------------------------
 display:
   - platform: ssd1306_i2c
     model: "SSD1306 128x64"
@@ -287,10 +448,11 @@ display:
         return;
       }
 
+      // If a message (HA or system) is active, show wrapped message
       if (id(show_message)) {
         it.fill(COLOR_OFF);
 
-        // ✅ wrapped message display
+        // Wrapped message
         auto wrap_text = [&](std::string text, int max_chars, int start_y, int line_height) {
           std::string line;
           int y = start_y;
@@ -298,7 +460,7 @@ display:
 
           for (char c : text) {
             if ((c == ' ' && count >= max_chars-1) || count >= max_chars) {
-              it.printf(64, y, id(fontmess), TextAlign::CENTER, "%s", line.c_str());
+              it.printf(64, y, id(font1), TextAlign::CENTER, "%s", line.c_str());
               line.clear();
               count = 0;
               y += line_height;
@@ -311,20 +473,27 @@ display:
           }
 
           if (!line.empty() && y <= 64) {
-            it.printf(64, y, id(fontmess), TextAlign::CENTER, "%s", line.c_str());
+            it.printf(64, y, id(font1), TextAlign::CENTER, "%s", line.c_str());
           }
         };
 
-        wrap_text(id(message_text), 12, 0, 14);  // max 12 chars per line
+        wrap_text(id(message_text), 12, 0, 14);
         return;
       }
 
-      // ✅ rest of your existing display pages untouched
+      // If admin entry mode active, show prompt
+      if (id(admin_entry_mode)) {
+        it.fill(COLOR_OFF);
+        it.printf(64, 10, id(font2), TextAlign::CENTER, "Admin Access");
+        it.printf(64, 40, id(font1), TextAlign::CENTER, "Enter PIN then #");
+        return;
+      }
+
       if (id(show_welcome)) {
         it.fill(COLOR_OFF);
         it.printf(64, 25, id(font3), TextAlign::CENTER, "LockEase");
         it.printf(64, 45, id(font3), TextAlign::CENTER, "v1.0");
-      } 
+      }
       else if (id(entering_pin_page)) {
         it.fill(COLOR_OFF);
         it.printf(64, 10, id(font2), TextAlign::CENTER, "Enter PIN");
@@ -357,7 +526,20 @@ display:
         else if (id(current_page) == 4) {
           it.printf(64, 32, id(font2), TextAlign::CENTER, "Coming Soon 2");
         }
+        else if (id(current_page) == 5) {
+          // Admin Menu (only available after unlock)
+          it.fill(COLOR_OFF);
+          if (id(admin_unlocked)) {
+            it.printf(64, 8, id(font2), TextAlign::CENTER, "Admin Menu");
+            it.printf(64, 26, id(font1), TextAlign::CENTER, "1) Reset Config");
+            it.printf(64, 42, id(font1), TextAlign::CENTER, "2) Toggle Display");
+            it.printf(64, 58, id(font1), TextAlign::CENTER, "3) Other...");
+          } else {
+            it.printf(64, 32, id(font2), TextAlign::CENTER, "Admin Locked");
+          }
+        }
       }
+
 # ------------------------
 # Fonts
 # ------------------------
@@ -378,10 +560,6 @@ font:
     id: fontd
     size: 44
 
-  - file: "fonts/digital-7m.ttf"
-    id: fontmess
-    size: 24
-
 # ------------------------
 # Binary Sensor (Status)
 # ------------------------
@@ -398,27 +576,11 @@ binary_sensor:
         - delay: 500ms
         - light.turn_off: status_light
 
+# ------------------------
+# Sensors
+# ------------------------
 sensor:
   - platform: wifi_signal
     name: "WiFi Signal"
     id: wifi_strength
     update_interval: 60s
-
-
-
-# ------------------------
-# Scripts
-# ------------------------
-script:
-  - id: show_temp_message
-    mode: restart
-    then:
-      - lambda: |-
-          id(message_text) = id(ha_message).state;
-          id(show_message) = true;
-          id(last_interaction) = millis() / 1000;
-      - component.update: oled_display
-      - delay: 5s
-      - lambda: |-
-          id(show_message) = false;
-      - component.update: oled_display
