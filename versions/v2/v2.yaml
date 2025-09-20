@@ -34,14 +34,23 @@ captive_portal:
 globals:
   - id: disarm_code
     type: std::string
-    initial_value: '"4321"'
+    initial_value: '"0152"'
   - id: arm_code
     type: std::string
-    initial_value: '"1234"'
+    initial_value: '"9999"'
   - id: admin_code
     type: std::string
-    initial_value: '"0152"'
+    initial_value: '"2468"'
   - id: temp_code
+    type: std::string
+    initial_value: ""
+  - id: guest_code
+    type: std::string
+    initial_value: ""
+  - id: maid_code
+    type: std::string
+    initial_value: ""
+  - id: otp_code
     type: std::string
     initial_value: ""
   - id: current_pin
@@ -212,11 +221,32 @@ text_sensor:
         - script.execute: show_temp_message
   - platform: homeassistant
     id: ha_temp_code
-    entity_id: input_text.lockease_temp_pin_timeout
+    entity_id: input_text.temp_pin
     on_value:
       then:
         - lambda: |-
             id(temp_code) = x;
+  - platform: homeassistant
+    id: ha_guest_code
+    entity_id: input_text.guest_pin
+    on_value:
+      then:
+        - lambda: |-
+            id(guest_code) = x;
+  - platform: homeassistant
+    id: ha_maid_code
+    entity_id: input_text.maid_pin
+    on_value:
+      then:
+        - lambda: |-
+            id(maid_code) = x;
+  - platform: homeassistant
+    id: ha_otp_code
+    entity_id: input_text.otp_pin
+    on_value:
+      then:
+        - lambda: |-
+            id(otp_code) = x;
   - platform: homeassistant
     id: door_status
     entity_id: binary_sensor.main_door_contact # REPLACE with your entity ID
@@ -333,69 +363,69 @@ matrix_keypad:
   keys: "123A456B789C*0#D"
   has_diodes: true
   on_key:
-        - lambda: |-
-            id(last_interaction) = millis() / 1000;
-            static unsigned long last_special_time = 0;
-            static char last_special = 0;
-            unsigned long now = millis();
-            if (last_special == 'A' && x == 'B' && (now - last_special_time) < 2000) {
-              if (id(admin_unlocked)) {
-                id(current_page) = 5;
-                return;
-              }
-              id(admin_entry_mode) = true;
-              id(message_text) = "Enter Admin PIN";
-              id(show_message) = true;
-              id(message_ttl) = (int)(millis() / 1000) + 20;
-              id(last_interaction) = millis() / 1000;
-              id(current_pin) = "";
-              return;
+    - lambda: |-
+        id(last_interaction) = millis() / 1000;
+        static unsigned long last_special_time = 0;
+        static char last_special = 0;
+        unsigned long now = millis();
+        if (last_special == 'A' && x == 'B' && (now - last_special_time) < 2000) {
+          if (id(admin_unlocked)) {
+            id(current_page) = 5;
+            return;
+          }
+          id(admin_entry_mode) = true;
+          id(message_text) = "Enter Admin PIN";
+          id(show_message) = true;
+          id(message_ttl) = (int)(millis() / 1000) + 20;
+          id(last_interaction) = millis() / 1000;
+          id(current_pin) = "";
+          return;
+        }
+        if (x == 'A' || x == 'B') {
+          last_special = x;
+          last_special_time = now;
+        } else {
+          last_special = 0;
+          last_special_time = 0;
+        }
+        if (id(show_welcome)) {
+          id(show_welcome) = false;
+          id(current_page) = 0;
+          return;
+        }
+        if (x >= '0' && x <= '9') {
+          if (id(current_page) == 5 && id(admin_unlocked)) {
+            if (x == '1') {
+              id(admin_action_1).execute();
             }
-            if (x == 'A' || x == 'B') {
-              last_special = x;
-              last_special_time = now;
-            } else {
-              last_special = 0;
-              last_special_time = 0;
+            if (x == '2') {
+              id(admin_action_2).execute();
             }
-            if (id(show_welcome)) {
-              id(show_welcome) = false;
-              id(current_page) = 0;
-              return;
+            if (x == '3') {
+              id(admin_action_3).execute();
             }
-            if (x >= '0' && x <= '9') {
-              if (id(current_page) == 5 && id(admin_unlocked)) {
-                if (x == '1') {
-                  id(admin_action_1).execute();
-                }
-                if (x == '2') {
-                  id(admin_action_2).execute();
-                }
-                if (x == '3') {
-                  id(admin_action_3).execute();
-                }
-              }
-              id(entering_pin_page) = true;
-              id(current_pin) += x;
-              return;
-            }
-            if ((x == 'A' || x == 'B' || x == 'C' || x == 'D') && !id(admin_unlocked)) {
-              id(message_text) = "Admin Locked";
-              id(show_message) = true;
-              id(message_ttl) = (int)(millis() / 1000) + 2;
-              return;
-            }
-            if (x == 'A') {
-              id(current_page)--;
-              if (id(current_page) < 0) id(current_page) = 5;
-            } else if (x == 'B') {
-              id(current_page)++;
-              if (id(current_page) > 5) id(current_page) = 0;
-            } else if (x == 'C') {
-              id(current_page) = (id(current_page) + 1) % 6;
-            } else if (x == 'D') {
-              id(current_page) = (id(current_page) - 1 + 6) % 6;
-            }
+          }
+          id(entering_pin_page) = true;
+          id(current_pin) += x;
+          return;
+        }
+        if ((x == 'A' || x == 'B' || x == 'C' || x == 'D') && !id(admin_unlocked)) {
+          id(message_text) = "Admin Locked";
+          id(show_message) = true;
+          id(message_ttl) = (int)(millis() / 1000) + 2;
+          return;
+        }
+        if (x == 'A') {
+          id(current_page)--;
+          if (id(current_page) < 0) id(current_page) = 5;
+        } else if (x == 'B') {
+          id(current_page)++;
+          if (id(current_page) > 5) id(current_page) = 0;
+        } else if (x == 'C') {
+          id(current_page) = (id(current_page) + 1) % 6;
+        } else if (x == 'D') {
+          id(current_page) = (id(current_page) - 1 + 6) % 6;
+        }
 # ------------------------
 # Key Collectors
 # ------------------------
@@ -419,17 +449,34 @@ key_collector:
           id(entered_pin).publish_state(x);
           
           bool granted = false;
-          if (x == id(disarm_code)) {
+          
+          if (x == id(otp_code) && id(ha_otp_expiry).state > id(ha_time).now().timestamp) {
+            id(alarm_control).publish_state("Disarmed");
+            id(message_text) = "OTP Access Granted";
+            id(show_message) = true;
+            id(message_ttl) = (int)(millis() / 1000) + 3;
+            granted = true;
+            id(otp_code) = ""; // Clear OTP PIN after use
+          }
+          else if (x == id(maid_code) && id(ha_maid_expiry).state > id(ha_time).now().timestamp) {
+            id(alarm_control).publish_state("Disarmed");
+            id(message_text) = "Maid Access Granted";
+            id(show_message) = true;
+            id(message_ttl) = (int)(millis() / 1000) + 3;
+            granted = true;
+          }
+          else if (x == id(guest_code) && id(ha_guest_expiry).state > id(ha_time).now().timestamp) {
+            id(alarm_control).publish_state("Disarmed");
+            id(message_text) = "Guest Access Granted";
+            id(show_message) = true;
+            id(message_ttl) = (int)(millis() / 1000) + 3;
+            granted = true;
+          }
+          else if (x == id(disarm_code)) {
             id(alarm_control).publish_state("Disarmed");
             granted = true;
           } else if (x == id(arm_code)) {
             id(alarm_control).publish_state("Armed");
-            granted = true;
-          } else if (x == id(temp_code) && id(ha_temp_code_expiry).state > id(ha_time).now().timestamp) {
-            id(alarm_control).publish_state("Disarmed");
-            id(message_text) = "Temp Access Granted";
-            id(show_message) = true;
-            id(message_ttl) = (int)(millis() / 1000) + 3;
             granted = true;
           }
           
@@ -636,8 +683,21 @@ sensor:
     name: "Uptime"
   - platform: homeassistant
     id: ha_temp_code_expiry
-    entity_id: input_datetime.lockease_temp_pin_timeout
+    entity_id: input_datetime.temp_pin_expiry
     internal: true
+  - platform: homeassistant
+    id: ha_guest_expiry
+    entity_id: input_datetime.guest_pin_expiry
+    internal: true
+  - platform: homeassistant
+    id: ha_maid_expiry
+    entity_id: input_datetime.maid_pin_expiry
+    internal: true
+  - platform: homeassistant
+    id: ha_otp_expiry
+    entity_id: input_datetime.otp_pin_expiry
+    internal: true
+
 
 binary_sensor:
   - platform: status
