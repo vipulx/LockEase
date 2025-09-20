@@ -460,7 +460,7 @@ display:
 
           for (char c : text) {
             if ((c == ' ' && count >= max_chars-1) || count >= max_chars) {
-              it.printf(64, y, id(font1), TextAlign::CENTER, "%s", line.c_str());
+              it.printf(64, y, id(fontdsmall), TextAlign::CENTER, "%s", line.c_str());
               line.clear();
               count = 0;
               y += line_height;
@@ -473,11 +473,11 @@ display:
           }
 
           if (!line.empty() && y <= 64) {
-            it.printf(64, y, id(font1), TextAlign::CENTER, "%s", line.c_str());
+            it.printf(64, y, id(fontdsmall), TextAlign::CENTER, "%s", line.c_str());
           }
         };
 
-        wrap_text(id(message_text), 12, 0, 14);
+        wrap_text(id(message_text), 12, 10, 14);
         return;
       }
 
@@ -485,19 +485,19 @@ display:
       if (id(admin_entry_mode)) {
         it.fill(COLOR_OFF);
         it.printf(64, 10, id(font2), TextAlign::CENTER, "Admin Access");
-        it.printf(64, 40, id(font1), TextAlign::CENTER, "Enter PIN then #");
+        it.printf(64, 40, id(fontdMedium), TextAlign::CENTER, "%s", id(current_pin).c_str());
         return;
       }
 
       if (id(show_welcome)) {
         it.fill(COLOR_OFF);
         it.printf(64, 25, id(font3), TextAlign::CENTER, "LockEase");
-        it.printf(64, 45, id(font3), TextAlign::CENTER, "v1.0");
+        it.printf(64, 50, id(fontdsmall), TextAlign::CENTER, "v1.0");
       }
       else if (id(entering_pin_page)) {
         it.fill(COLOR_OFF);
         it.printf(64, 10, id(font2), TextAlign::CENTER, "Enter PIN");
-        it.printf(64, 40, id(fontd), TextAlign::CENTER, "%s", id(current_pin).c_str());
+        it.printf(64, 40, id(fontdMedium), TextAlign::CENTER, "%s", id(current_pin).c_str());
       }
       else if (id(rfid_page)) {
         it.fill(COLOR_OFF);
@@ -506,7 +506,7 @@ display:
       }
       else {
         if (id(current_page) == 0) {
-          it.strftime(64, 32, id(fontd), TextAlign::CENTER, "%H:%M", id(home_time).now());
+          it.strftime(64, 25, id(fontdMedium), TextAlign::CENTER, "%H:%M", id(home_time).now());
           it.printf(64, 55, id(font2), TextAlign::CENTER, "%s", id(alarm_status).state.c_str());
         }
         else if (id(current_page) == 1) {
@@ -556,9 +556,26 @@ font:
     id: font3
     size: 24
 
+
+
+  - file: "ARIAL.TTF"
+    id: fontSmall
+    size: 12
+  - file: "ARIAL.TTF"
+    id: fontmMedium
+    size: 24
+  - file: "ARIAL.TTF"
+    id: fontLarge
+    size: 48
+
   - file: "fonts/digital-7m.ttf"
-    id: fontd
+    id: fontdMedium
     size: 44
+
+  - file: "fonts/digital-7m.ttf"
+    id: fontdsmall
+    size: 24
+
 
 # ------------------------
 # Binary Sensor (Status)
