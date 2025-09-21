@@ -1,0 +1,167 @@
+views:
+  - title: v1.0
+    sections:
+      - type: grid
+        cards:
+          - type: custom:bubble-card
+            card_type: button
+            button_type: slider
+            entity: light.doordash_status_light
+            use_accent_color: false
+            show_icon: false
+            scrolling_effect: false
+            show_name: false
+            show_state: false
+            sub_button:
+              - entity: switch.doordash_easelock_esp_restart
+                show_icon: true
+                show_name: false
+                state_background: false
+                show_background: false
+                tap_action:
+                  action: more-info
+                double_tap_action:
+                  action: toggle
+                hold_action:
+                  action: toggle
+            hold_action:
+              action: more-info
+            double_tap_action:
+              action: more-info
+            tap_action:
+              action: toggle
+          - show_state: true
+            show_name: true
+            camera_view: auto
+            fit_mode: cover
+            type: picture-entity
+            entity: light.esphome_bedroom_bedroom_light
+            image: /api/image/serve/2c3cf9570a70dd73d96d7413ade6a154/512x512
+            name: ● Live
+          - type: custom:bubble-card
+            card_type: button
+            button_type: state
+            entity: alarm_control_panel.alarmo
+            grid_options:
+              columns: 6
+              rows: auto
+          - type: custom:bubble-card
+            card_type: button
+            button_type: state
+            entity: binary_sensor.esphome_bedroom_bathroom_motion_sensor
+            grid_options:
+              columns: 6
+              rows: auto
+          - type: entities
+            entities:
+              - entity: sensor.doordash_alarm_control
+          - type: entities
+            entities:
+              - light.doordash_status_light
+          - type: entities
+            entities:
+              - input_text.oled_message
+            title: Message
+          - type: entities
+            entities:
+              - entity: switch.doordash_lock_relay
+              - entity: light.doordash_onboard_led
+              - entity: sensor.doordash_alarm_control
+              - entity: sensor.doordash_entered_pin
+              - entity: sensor.doordash_last_rfid_tag
+          - type: entities
+            entities:
+              - sensor.doordash_uptime
+    header:
+      card:
+        type: markdown
+        content: |
+          # Hello {{ user }}
+          IP: {{ states('sensor.doordash_lockease_ip') }} ✨
+        text_only: true
+      content: |
+        # Hello {{ user }}
+
+        Add your text here: {{ states('sensor.doordash_lockease_ip') }} ✨
+    badges:
+      - type: entity
+        show_name: false
+        show_state: true
+        show_icon: true
+        entity: sensor.doordash_lockease_cpu_temperature
+    type: sections
+    max_columns: 4
+    cards: []
+  - type: sections
+    max_columns: 4
+    title: v2
+    path: v2
+    sections:
+      - type: grid
+        cards:
+          - type: heading
+            heading: New section
+          - type: tile
+            entity: sensor.doordash_alarm_control
+          - type: tile
+            entity: sensor.doordash_lockease_cpu_temperature
+          - type: tile
+            entity: binary_sensor.doordash_lockease_device_status
+          - type: tile
+            entity: switch.doordash_easelock_esp_restart
+          - type: tile
+            entity: sensor.doordash_entered_pin
+          - type: tile
+            entity: sensor.doordash_lockease_ip
+          - type: tile
+            entity: sensor.doordash_last_rfid_tag
+          - type: tile
+            entity: switch.doordash_lock_relay
+          - type: tile
+            entity: input_text.lockease_message
+          - type: tile
+            entity: light.doordash_onboard_led
+          - type: tile
+            entity: light.doordash_status_light
+          - type: tile
+            entity: sensor.doordash_uptime
+          - type: tile
+            entity: sensor.doordash_lockease_wifi_signal
+          - type: tile
+            entity: automation.rfid_doordask
+      - type: grid
+        cards:
+          - type: heading
+            heading: Temp Password
+            heading_style: title
+          - type: tile
+            entity: input_text.lockease_temp_pin
+          - type: tile
+            entity: input_datetime.lockease_temp_pin_timeout
+          - type: tile
+            entity: input_boolean.otp_mode_enabled
+          - type: tile
+            entity: input_boolean.maid_mode_enabled
+          - type: tile
+            entity: input_boolean.guest_mode_enabled
+      - type: grid
+        cards:
+          - type: heading
+            heading: Access Modes
+            heading_style: title
+            icon: mdi:lock-clock
+          - show_name: true
+            show_icon: true
+            type: button
+            entity: input_boolean.guest_mode_enabled
+            name: Guest Mode
+          - show_name: true
+            show_icon: true
+            type: button
+            entity: input_boolean.maid_mode_enabled
+            name: Maid Mode
+          - show_name: true
+            show_icon: true
+            type: button
+            entity: input_boolean.otp_mode_enabled
+            name: OTP Mode
