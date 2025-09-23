@@ -101,6 +101,7 @@ LockEase is a sophisticated smart lock system designed for enhanced home securit
 ## Contributing
 
 We welcome contributions\! If you have suggestions for improvements, new features, or bug fixes, please open an issue or submit a pull request.
+![Project Door](images/Lockease.jpg "Door Lock Project")
 
 -----
 
