@@ -1,10 +1,8 @@
+![Project Door](images/Lockease.png "Door Lock Project")
 ## LockEase - Your Smart Lock System
-[](https://www.google.com/search?q=https://github.com/your-repo-link)
-
+[](https://www.google.com/search?q=https://github.com/vipulx/LockEase)
 LockEase is a sophisticated smart lock system designed for enhanced home security and seamless integration with Home Assistant. It features multi-factor access control, an intuitive OLED display, and robust security measures to keep your property safe and accessible.
 
-
-![Project Door](images/Lockease.png "Door Lock Project")
 
 -----
 
