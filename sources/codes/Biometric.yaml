@@ -1,0 +1,3 @@
+ota:
+  - platform: esphome
+    password: "31ea519002d10bf763e2bd2e78ba41b6"
