@@ -15,11 +15,9 @@ api:
   encryption:
     key: "75ydHoY1mUCE4aQ1LwEpGpQAWNtILesGnZEY5l7KbWg="
 
-
 ota:
   - platform: esphome
     password: "31ea519002d10bf763e2bd2e78ba41b6"
-
 
 wifi:
   ssid: !secret wifi_ssid
@@ -28,43 +26,64 @@ wifi:
     ssid: "32Cam Fallback Hotspot"
     password: "xMzlDmClGg4J"
 
+# Web interface for live stream
 web_server:
   port: 80
 
-
 captive_portal:
 
-# Define I2C bus first
+
+substitutions:
+  camera_name: my_esp32_camera
+
+# I2C configuration for camera (required)
 i2c:
   id: cam_i2c
   sda: GPIO26
   scl: GPIO27
 
-
-# Example configuration entry
+# ESP32-CAM configuration
 esp32_camera:
+  name: ${camera_name}
+  id: cam
   external_clock:
     pin: GPIO0
     frequency: 20MHz
-  i2c_id: cam_i2c  # use the defined bus
+  i2c_id: cam_i2c
   data_pins: [GPIO5, GPIO18, GPIO19, GPIO21, GPIO36, GPIO39, GPIO34, GPIO35]
   vsync_pin: GPIO25
   href_pin: GPIO23
   pixel_clock_pin: GPIO22
   power_down_pin: GPIO32
+  resolution: 1600x1200
+  jpeg_quality: 10
+  vertical_flip: false
+  horizontal_mirror: true
 
-  # Image settings
-  name: My ESP32-CAM 
-
-  
-# Flash LED output (GPIO4)
+# Flash LED control
 output:
   - platform: gpio
     pin: GPIO4
     id: flash_output
 
-# Control LED as a light
 light:
   - platform: binary
     name: "Camera Flash"
     output: flash_output
+    
+sensor:
+  - platform: uptime
+    name: "LockEase Camera Uptime"
+
+  - platform: wifi_signal
+    name: "LockEase Cam Signal Strength"
+    update_interval: 60s
+
+  - platform: internal_temperature
+    name: "LockEase Biometric CPU Temperature"
+
+
+# Optional: Restart button
+button:
+  - platform: restart
+    name: "Restart Camera"
