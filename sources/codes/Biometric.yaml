@@ -1,3 +1,61 @@
+esphome:
+  name: 32cam
+  friendly_name: 32cam
+
+esp32:
+  board: esp32dev
+  framework:
+    type: arduino
+
+# Enable logging
+logger:
+
+# Enable Home Assistant API
+api:
+  encryption:
+    key: "75ydHoY1mUCE4aQ1LwEpGpQAWNtILesGnZEY5l7KbWg="
+
+
 ota:
   - platform: esphome
     password: "31ea519002d10bf763e2bd2e78ba41b6"
+
+
+wifi:
+  ssid: !secret wifi_ssid
+  password: !secret wifi_password
+  ap:
+    ssid: "32Cam Fallback Hotspot"
+    password: "xMzlDmClGg4J"
+
+captive_portal:
+
+# Define I2C bus first
+i2c:
+  id: cam_i2c
+  sda: GPIO26
+  scl: GPIO27
+
+esp32_camera:
+  name: ESP32 Camera
+  external_clock:
+    pin: GPIO0
+    frequency: 20MHz
+  i2c_id: cam_i2c  # use the defined bus
+  data_pins: [GPIO5, GPIO18, GPIO19, GPIO21, GPIO36, GPIO39, GPIO34, GPIO35]
+  vsync_pin: GPIO25
+  href_pin: GPIO23
+  pixel_clock_pin: GPIO22
+  power_down_pin: GPIO32
+
+# Flash LED output (GPIO4)
+output:
+  - platform: gpio
+    pin: GPIO4
+    id: flash_output
+
+# Control LED as a light
+light:
+  - platform: binary
+    name: "Camera Flash"
+    output: flash_output
