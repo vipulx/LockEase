@@ -12,7 +12,6 @@ logger:
 
 # Enable Home Assistant API
 api:
-  id: homeassistant_api
   encryption:
     key: "rR1cNifOJ4A7CzSfwLfX+H6uWZWU59znkl8OtoFJWts="
 
@@ -25,22 +24,38 @@ wifi:
   ssid: !secret wifi_ssid
   password: !secret wifi_password
   ap:
-    ssid: "LockEase v1.0"
+    ssid: "LockEase v2.0"
     password: "Xl8dbl2PNe66"
 captive_portal:
+
+
+# ------------------------
+# MQTT Integration
+# ------------------------
+# mqtt:
+#   broker: 10.224.213.114
+#   # broker: core-mosquitto
+#   port: 1883
+#   username: "mqtt"
+#   password: "015201"
+#   client_id: esphome-lockease
+#   discovery: true
+#   discovery_retain: true
+#   topic_prefix: "lockease"
+
 # ------------------------
 # Globals
 # ------------------------
 globals:
   - id: disarm_code
     type: std::string
-    initial_value: '"0152"'
+    initial_value: '"0000"'
   - id: arm_code
     type: std::string
     initial_value: '"9999"'
   - id: admin_code
     type: std::string
-    initial_value: '"2468"'
+    initial_value: '"0152"'
   - id: temp_code
     type: std::string
     initial_value: ""
@@ -196,9 +211,26 @@ light:
 # Text Sensors
 # ------------------------
 text_sensor:
+# ------------------------
+# Automations for Alarm Status
+# ------------------------
   - platform: template
     id: alarm_control
     name: "Alarm Control"
+    on_value:
+      then:
+        - lambda: |-
+            if (x == "Armed") {
+              // Armed mode = Red
+              id(red_status).execute();
+            } else if (x == "Disarmed") {
+              // Disarmed mode = Green
+              id(green_status).execute();
+            } else {
+              // Any other state = Blue
+              id(blue_status).execute();
+            }
+
   - platform: template
     id: entered_pin
     name: "Entered PIN"
@@ -273,6 +305,20 @@ text_sensor:
               id(menu_option) = 0;
             }
 
+  - platform: homeassistant
+    id: LockEase_Status_Preset
+    entity_id: input_select.lockease_status_preset
+    on_value:
+      then:
+        - lambda: |-
+            if (x == "Access Granted") id(access_gained).execute();
+            else if (x == "Access Denied") id(access_denied).execute();
+            else if (x == "Relay Flash") id(relay_on_flash).execute();
+            else if (x == "Red Status") id(red_status).execute();
+            else if (x == "Green Status") id(green_status).execute();
+            else if (x == "Blue Status") id(blue_status).execute();
+
+
 # ------------------------
 # Scripts
 # ------------------------
@@ -313,6 +359,86 @@ script:
           id(show_message) = true;
           id(message_ttl) = (int)(millis() / 1000) + 2;
 
+  - id: relay_on_flash
+    mode: restart
+    then:
+      - repeat:
+          count: 3
+          then:
+            - light.turn_on:
+                id: status_light
+                red: 0
+                green: 100%
+                blue: 0
+            - delay: 500ms
+            - light.turn_off: status_light
+            - delay: 500ms
+
+  - id: access_denied
+    mode: restart
+    then:
+      - repeat:
+          count: 3
+          then:
+            - light.turn_on:
+                id: status_light
+                red: 100%
+                green: 0
+                blue: 0
+            - delay: 500ms
+            - light.turn_off: status_light
+            - delay: 500ms
+
+  - id: access_gained 
+    mode: restart
+    then:
+      - repeat:
+          count: 3
+          then:
+            - light.turn_on:
+                id: status_light
+                red: 0
+                green: 100%
+                blue: 0
+            - delay: 500ms
+            - light.turn_off: status_light
+            - delay: 500ms
+
+  - id: green_status
+    mode: restart
+    then:
+      - repeat:
+          count: 3
+          then:
+            - light.turn_on:
+                id: status_light
+                red: 0
+                green: 100%
+                blue: 0
+
+  - id: blue_status
+    mode: restart
+    then:
+      - repeat:
+          count: 3
+          then:
+            - light.turn_on:
+                id: status_light
+                red: 0
+                green: 0
+                blue: 100%
+
+  - id: red_status
+    mode: restart
+    then:
+      - repeat:
+          count: 3
+          then:
+            - light.turn_on:
+                id: status_light
+                red: 100%
+                green: 0
+                blue: 0
 # ------------------------
 # RFID RC522
 # ------------------------
@@ -334,8 +460,12 @@ rc522_spi:
           if (x == "32-CA-68-3F" || x == "42-11-E0-3F") {
             id(alarm_control).publish_state("Disarmed");
             id(message_text) = "Access Granted";
+            id(access_gained).execute();
           } else {
             id(message_text) = "Access Denied";
+            id(access_denied).execute();
+
+
           }
           id(show_message) = true;
           id(message_ttl) = (int)(millis() / 1000) + 3;
@@ -368,9 +498,9 @@ matrix_keypad:
         static unsigned long last_special_time = 0;
         static char last_special = 0;
         unsigned long now = millis();
-        if (last_special == 'A' && x == 'B' && (now - last_special_time) < 2000) {
+        if (last_special == 'B' && x == 'A' && (now - last_special_time) < 2000) {
           if (id(admin_unlocked)) {
-            id(current_page) = 5;
+            id(current_page) = 5; 
             return;
           }
           id(admin_entry_mode) = true;
@@ -453,6 +583,7 @@ key_collector:
           if (x == id(otp_code) && id(ha_otp_expiry).state > id(ha_time).now().timestamp) {
             id(alarm_control).publish_state("Disarmed");
             id(message_text) = "OTP Access Granted";
+            id(access_gained).execute();
             id(show_message) = true;
             id(message_ttl) = (int)(millis() / 1000) + 3;
             granted = true;
@@ -461,6 +592,7 @@ key_collector:
           else if (x == id(maid_code) && id(ha_maid_expiry).state > id(ha_time).now().timestamp) {
             id(alarm_control).publish_state("Disarmed");
             id(message_text) = "Maid Access Granted";
+            id(access_gained).execute();
             id(show_message) = true;
             id(message_ttl) = (int)(millis() / 1000) + 3;
             granted = true;
@@ -468,15 +600,18 @@ key_collector:
           else if (x == id(guest_code) && id(ha_guest_expiry).state > id(ha_time).now().timestamp) {
             id(alarm_control).publish_state("Disarmed");
             id(message_text) = "Guest Access Granted";
+            id(access_gained).execute();
             id(show_message) = true;
             id(message_ttl) = (int)(millis() / 1000) + 3;
             granted = true;
           }
           else if (x == id(disarm_code)) {
             id(alarm_control).publish_state("Disarmed");
+            id(access_gained).execute();
             granted = true;
           } else if (x == id(arm_code)) {
             id(alarm_control).publish_state("Armed");
+            id(access_denied).execute();
             granted = true;
           }
           
@@ -515,12 +650,16 @@ key_collector:
           id(last_interaction) = millis() / 1000;
           if (x == id(admin_code)) {
             id(admin_unlocked) = true;
+            id(access_gained).execute();
             id(admin_unlocked_until) = (int)(millis() / 1000) + 60;
             id(message_text) = "Admin Access Granted";
             id(show_message) = true;
             id(message_ttl) = (int)(millis() / 1000) + 2;
           } else {
             id(message_text) = "Wrong Admin Code";
+            id(access_denied).execute();
+
+
             id(show_message) = true;
             id(message_ttl) = (int)(millis() / 1000) + 2;
           }
@@ -543,13 +682,18 @@ key_collector:
 # Relay for Lock
 # ------------------------
 switch:
+
+  - platform: restart
+    name: "EaseLock ESP Restart"
+
   - platform: gpio
     pin: GPIO19
     id: lock_relay
     name: "Lock Relay"
     restore_mode: RESTORE_DEFAULT_OFF
-  - platform: restart
-    name: "EaseLock ESP Restart"
+    on_turn_on:
+      - script.execute: relay_on_flash
+
 
 # ------------------------
 # OLED Display (SSD1306 0.96")
@@ -621,9 +765,16 @@ display:
       it.fill(COLOR_OFF);
       switch (id(current_page)) {
         case 0:
-          it.strftime(64, 25, id(fontdMedium), TextAlign::CENTER, "%H:%M", id(home_time).now());
+          it.printf(64, 5, id(font1), TextAlign::CENTER, "%s", id(alarm_control).state.c_str());
+
+          it.strftime(40, 25, id(fontdMedium), TextAlign::CENTER, "%H:%M", id(home_time).now());
+          
+          it.printf(110, 25, id(font1), TextAlign::CENTER, "%.1f°C", id(Home_Temperature).state);
+          it.printf(110, 40, id(font1), TextAlign::CENTER, "%.1f%%", id(Home_Humidity).state);
+
           it.printf(64, 55, id(font2), TextAlign::CENTER, "%s", id(alarm_status).state.c_str());
           break;
+
         case 1:
           it.printf(64, 5, id(font2), TextAlign::CENTER, "Device Info");
           it.line(0, 20, 127, 20);
@@ -631,13 +782,16 @@ display:
           it.printf(5, 40, id(font1), "Signal: %.0f dBm", id(wifi_strength).state);
           it.printf(5, 55, id(font1), "Lock: %s", id(lock_relay).state ? "Unlocked" : "Locked");
           break;
+
         case 2:
           it.printf(64, 10, id(font2), TextAlign::CENTER, "HA Data");
           it.line(0, 25, 127, 25);
           it.printf(5, 30, id(font1), "Door: %s", id(door_status).state.c_str());
           it.printf(5, 45, id(font1), "Temp: %s", id(temperature).state.c_str());
           break;
+
         case 3:
+          it.printf(64, 32, id(font2), TextAlign::CENTER, "Soon");
         case 4:
           it.printf(64, 32, id(font2), TextAlign::CENTER, "Coming Soon");
           break;
@@ -673,6 +827,14 @@ font:
     size: 24
 
 sensor:
+  - platform: homeassistant
+    id: Home_Temperature
+    entity_id: sensor.esphome_bedroom_room_temperature
+
+  - platform: homeassistant
+    id: Home_Humidity
+    entity_id: sensor.esphome_bedroom_room_humidity
+
   - platform: wifi_signal
     name: "LockEase WiFi Signal"
     id: wifi_strength
@@ -681,6 +843,7 @@ sensor:
     name: "LockEase CPU Temperature"
   - platform: uptime
     name: "Uptime"
+
   - platform: homeassistant
     id: ha_temp_code_expiry
     entity_id: input_datetime.temp_pin_expiry
@@ -709,5 +872,6 @@ binary_sensor:
             red: 0
             green: 100%
             blue: 0
-        - delay: 500ms
+        - delay: 5000ms
         - light.turn_off: status_light
+
